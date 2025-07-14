@@ -16,6 +16,7 @@ const initialReleaseNotes = [
     title: "Bug Fixes and Performance Improvements",
     description:
       "This release focuses on stability improvements and bug fixes based on user feedback.",
+    tags: ["bug-fixes", "performance", "mobile", "dashboard"],
     changes: [
       {
         type: "fix",
@@ -37,6 +38,7 @@ const initialReleaseNotes = [
     title: "New Dashboard Features",
     description:
       "Introducing enhanced analytics and customizable dashboard widgets.",
+    tags: ["dashboard", "analytics", "widgets", "mobile", "dark-mode"],
     changes: [
       { type: "feature", text: "Added customizable dashboard widgets" },
       { type: "feature", text: "New analytics charts with real-time data" },
@@ -51,6 +53,7 @@ const initialReleaseNotes = [
     type: "patch",
     title: "Holiday Security Update",
     description: "Important security patches and stability improvements.",
+    tags: ["security", "patches", "xss", "authentication"],
     changes: [
       { type: "security", text: "Patched XSS vulnerability in user profiles" },
       { type: "security", text: "Updated authentication encryption standards" },
@@ -65,6 +68,7 @@ const initialReleaseNotes = [
     type: "patch",
     title: "Quick Fixes",
     description: "Addressing critical issues reported by our community.",
+    tags: ["bug-fixes", "search", "file-upload", "ux"],
     changes: [
       {
         type: "fix",
@@ -84,6 +88,7 @@ const initialReleaseNotes = [
     type: "minor",
     title: "Enhanced User Experience",
     description: "Major UX improvements and new collaboration features.",
+    tags: ["ux", "collaboration", "notifications", "accessibility", "search"],
     changes: [
       { type: "feature", text: "Real-time collaboration on documents" },
       {
@@ -105,6 +110,7 @@ const initialReleaseNotes = [
     type: "patch",
     title: "Thanksgiving Update",
     description: "Small but important fixes for a smoother experience.",
+    tags: ["bug-fixes", "calendar", "mobile", "performance"],
     changes: [
       {
         type: "fix",
@@ -121,6 +127,7 @@ const initialReleaseNotes = [
     type: "patch",
     title: "Stability Improvements",
     description: "Backend optimizations and bug fixes.",
+    tags: ["backend", "performance", "database", "security", "file-upload"],
     changes: [
       { type: "fix", text: "Fixed database connection pooling issues" },
       { type: "improvement", text: "Reduced API response times by 40%" },
@@ -138,6 +145,7 @@ const initialReleaseNotes = [
     type: "patch",
     title: "Quick Bug Fixes",
     description: "Addressing urgent issues from the 2.2.0 release.",
+    tags: ["bug-fixes", "payments", "notifications", "validation"],
     changes: [
       { type: "fix", text: "Fixed critical bug in payment processing" },
       { type: "fix", text: "Resolved email notification delivery issues" },
@@ -151,6 +159,7 @@ const initialReleaseNotes = [
     type: "minor",
     title: "Payment System Overhaul",
     description: "Complete redesign of our payment and billing system.",
+    tags: ["payments", "dashboard", "analytics", "security", "enterprise"],
     changes: [
       {
         type: "feature",
@@ -177,6 +186,7 @@ const ReleaseNotesApp = () => {
 
   // Filter states
   const [selectedMonth, setSelectedMonth] = useState("all");
+  const [selectedTags, setSelectedTags] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
 
   // Admin states
@@ -193,6 +203,7 @@ const ReleaseNotesApp = () => {
     type: "patch",
     title: "",
     description: "",
+    tags: [],
     changes: [{ type: "feature", text: "" }],
   });
 
@@ -210,12 +221,18 @@ const ReleaseNotesApp = () => {
 
   // Computed values
   const uniqueMonths = getUniqueMonths(releaseNotes);
-  const filteredNotes =
-    selectedMonth === "all"
-      ? releaseNotes
-      : releaseNotes.filter(
-          (note) => getMonthYear(note.date) === selectedMonth
-        );
+  const uniqueTags = [
+    ...new Set(releaseNotes.flatMap((note) => note.tags)),
+  ].sort();
+
+  const filteredNotes = releaseNotes.filter((note) => {
+    const monthMatch =
+      selectedMonth === "all" || getMonthYear(note.date) === selectedMonth;
+    const tagMatch =
+      selectedTags.length === 0 ||
+      selectedTags.some((tag) => note.tags.includes(tag));
+    return monthMatch && tagMatch;
+  });
 
   // Email handlers
   const handleSubscribe = (e) => {
@@ -242,6 +259,16 @@ const ReleaseNotesApp = () => {
     setShowFilters(false);
   };
 
+  const handleTagToggle = (tag) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const clearAllTags = () => {
+    setSelectedTags([]);
+  };
+
   // Admin handlers
   const addNewNote = () => {
     if (newNote.version && newNote.title) {
@@ -257,6 +284,7 @@ const ReleaseNotesApp = () => {
         type: "patch",
         title: "",
         description: "",
+        tags: [],
         changes: [{ type: "feature", text: "" }],
       });
     }
@@ -378,8 +406,12 @@ const ReleaseNotesApp = () => {
         handleSubscribe={handleSubscribe}
         handleUnsubscribe={handleUnsubscribe}
         selectedMonth={selectedMonth}
+        selectedTags={selectedTags}
         uniqueMonths={uniqueMonths}
+        uniqueTags={uniqueTags}
         handleMonthSelect={handleMonthSelect}
+        handleTagToggle={handleTagToggle}
+        clearAllTags={clearAllTags}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
         releaseNotes={releaseNotes}
@@ -388,10 +420,11 @@ const ReleaseNotesApp = () => {
       />
 
       {/* Vertical Divider - Fixed */}
-      <div className="fixed left-80 top-0 w-px h-screen bg-gradient-to-b from-gray-200 via-gray-300 to-gray-200 z-10"></div>
+      <div className="fixed left-96 top-0 w-px h-screen bg-gradient-to-b from-gray-200 via-gray-300 to-gray-200 z-10"></div>
 
       <MainContent
         selectedMonth={selectedMonth}
+        selectedTags={selectedTags}
         releaseNotes={releaseNotes}
         filteredNotes={filteredNotes}
         isAdmin={isAdmin}

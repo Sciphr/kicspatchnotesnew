@@ -45,54 +45,48 @@ const ReleaseNoteCard = ({ note, isAdmin, onDelete }) => {
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
       {/* Content */}
       <div className="p-6">
-        {/* Header for cards without images */}
-        {!note.image && (
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <span
-                className={`px-3 py-1 text-xs font-medium rounded-full border ${getVersionBadgeColor(
-                  note.type
-                )}`}
-              >
-                v{note.version}
-              </span>
-              <span className="text-sm text-gray-500">
-                {formatDate(note.date)}
-              </span>
-            </div>
-            {isAdmin && (
-              <button
-                onClick={() => onDelete(note.id)}
-                className="text-red-500 hover:text-red-700 p-1"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span
+              className={`px-3 py-1 text-xs font-medium rounded-full border ${getVersionBadgeColor(
+                note.type
+              )}`}
+            >
+              v{note.version}
+            </span>
+            <span className="text-sm text-gray-500">
+              {formatDate(note.date)}
+            </span>
           </div>
-        )}
-
-        {/* Header for cards with images */}
-        {note.image && (
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500">
-                {formatDate(note.date)}
-              </span>
-            </div>
-            {isAdmin && (
-              <button
-                onClick={() => onDelete(note.id)}
-                className="text-red-500 hover:text-red-700 p-1"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        )}
+          {isAdmin && (
+            <button
+              onClick={() => onDelete(note.id)}
+              className="text-red-500 hover:text-red-700 p-1"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
 
         <h4 className="text-lg font-semibold text-gray-900 mb-2">
           {note.title}
         </h4>
+
+        {/* Tags */}
+        {note.tags && note.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {note.tags.map((tag, index) => (
+              <span
+                key={index}
+                className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full"
+              >
+                {tag.replace("-", " ")}
+              </span>
+            ))}
+          </div>
+        )}
+
         <p className="text-gray-600 mb-4">{note.description}</p>
 
         <div className="space-y-2">

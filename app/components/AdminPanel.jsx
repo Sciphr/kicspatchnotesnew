@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { Settings, X, Plus, Edit, Save, Trash2 } from "lucide-react";
 
@@ -152,6 +150,44 @@ const AdminPanel = ({
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
                 />
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tags
+                </label>
+                <input
+                  type="text"
+                  value={newNote.tags.join(", ")}
+                  onChange={(e) => {
+                    const tags = e.target.value
+                      .split(",")
+                      .map((tag) =>
+                        tag.trim().toLowerCase().replace(/\s+/g, "-")
+                      )
+                      .filter((tag) => tag);
+                    setNewNote({ ...newNote, tags });
+                  }}
+                  placeholder="e.g., bug-fixes, performance, mobile (comma-separated)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter tags separated by commas. Spaces will be converted to
+                  hyphens.
+                </p>
+                {newNote.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {newNote.tags.map((tag, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Changes */}
@@ -320,35 +356,41 @@ const AdminPanel = ({
                         />
                       </div>
 
+                      {/* Tags */}
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          <div className="flex items-center gap-1">
-                            <Image className="w-3 h-3" />
-                            Image URL
-                          </div>
+                          Tags
                         </label>
                         <input
-                          type="url"
-                          value={editingData.image || ""}
-                          onChange={(e) =>
+                          type="text"
+                          value={
+                            editingData.tags ? editingData.tags.join(", ") : ""
+                          }
+                          onChange={(e) => {
+                            const tags = e.target.value
+                              .split(",")
+                              .map((tag) =>
+                                tag.trim().toLowerCase().replace(/\s+/g, "-")
+                              )
+                              .filter((tag) => tag);
                             setEditingData({
                               ...editingData,
-                              image: e.target.value,
-                            })
-                          }
-                          placeholder="https://example.com/image.jpg"
+                              tags,
+                            });
+                          }}
+                          placeholder="e.g., bug-fixes, performance, mobile"
                           className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
                         />
-                        {editingData.image && (
-                          <div className="mt-1">
-                            <img
-                              src={editingData.image}
-                              alt="Preview"
-                              className="w-full h-16 object-cover rounded border"
-                              onError={(e) => {
-                                e.target.style.display = "none";
-                              }}
-                            />
+                        {editingData.tags && editingData.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {editingData.tags.map((tag, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded-full"
+                              >
+                                {tag}
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>
