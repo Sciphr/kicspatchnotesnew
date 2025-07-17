@@ -1,23 +1,16 @@
 import { NextResponse } from "next/server";
-import { v4 as uuidv4 } from "uuid";
-import pool from "@/lib/mysql";
-import { createClient } from "@supabase/supabase-js";
-import { validateReleaseNote, sanitizeReleaseNote } from "@/lib/validators";
+import pool from "../../lib/mysql";
+import { validateReleaseNote, sanitizeReleaseNote } from "../../lib/validators";
 
 export async function POST(request) {
-  const supabaseUrl = process.env.DATABASE_URL;
-  const supabaseKey = process.env.API_STORAGE;
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
   try {
     const formData = await request.formData();
-    const file = formData.get("pictureUpload");
     const version = formData.get("versionNumber");
     const title = formData.get("entryTitle");
     const notes = formData.get("notes");
-    const description = formData.get("description"); // Make sure this field exists
+    const description = formData.get("description");
     const type = formData.get("type") || "patch";
-    const tags = formData.get("tags"); // Should be JSON string
+    const tags = formData.get("tags");
 
     let parsedNotes, parsedTags;
     try {
@@ -52,39 +45,13 @@ export async function POST(request) {
     // Sanitize the data
     const cleanData = sanitizeReleaseNote(releaseData);
 
-    // Handle file upload (if you're still using it)
-    let imageUrl = null,
-      filePath = null;
-    if (file) {
-      const fileName = `${uuidv4()}-${file.name}`;
-      filePath = `pictures/${fileName}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("kics-pictures")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) {
-        return NextResponse.json(
-          { error: "Failed to upload file." },
-          { status: 500 }
-        );
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("kics-pictures")
-        .getPublicUrl(filePath);
-
-      imageUrl = publicUrlData.publicUrl;
-    }
-
-    // Database insert
+    // MySQL database insert
     const connection = await pool.getConnection();
     try {
-      await connection.execute(
-        "INSERT INTO kics_release_notes (version, title, description, type, tags, notes, picture_url, picture_path, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+      const [result] = await connection.execute(
+        `INSERT INTO kics_release_notes 
+         (version, title, description, type, tags, notes, created_at) 
+         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
         [
           cleanData.version,
           cleanData.title,
@@ -92,20 +59,32 @@ export async function POST(request) {
           cleanData.type,
           JSON.stringify(cleanData.tags),
           JSON.stringify(cleanData.notes),
-          imageUrl,
-          filePath,
         ]
+      );
+
+      console.log("Release note saved to MySQL with ID:", result.insertId);
+
+      return NextResponse.json(
+        {
+          message: "Release notes saved successfully.",
+          id: result.insertId,
+        },
+        { status: 201 }
       );
     } finally {
       connection.release();
     }
-
-    return NextResponse.json(
-      { message: "Release notes saved successfully.", imageUrl },
-      { status: 201 }
-    );
   } catch (error) {
     console.error("API route error:", error);
+
+    // Handle specific MySQL errors
+    if (error.code === "ER_DUP_ENTRY") {
+      return NextResponse.json(
+        { error: "A release with this version already exists." },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: "An unexpected error occurred." },
       { status: 500 }

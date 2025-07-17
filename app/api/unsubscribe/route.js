@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import pool from "@/lib/mysql";
-import { validateEmail, sanitizeEmail } from "@/lib/validators";
+import pool from "../../lib/mysql";
+import { validateEmail, sanitizeEmail } from "../../lib/validators";
 
 export async function POST(request) {
   try {

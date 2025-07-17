@@ -6,176 +6,6 @@ import MainContent from "./MainContent";
 import AdminPanel from "./AdminPanel";
 import { getUniqueMonths, getMonthYear, isAdminIP } from "../utils/helpers";
 
-// Sample release notes data - in production this would come from a database
-const initialReleaseNotes = [
-  {
-    id: "1",
-    version: "2.4.1",
-    date: "2025-01-15",
-    type: "patch",
-    title: "Bug Fixes and Performance Improvements",
-    description:
-      "This release focuses on stability improvements and bug fixes based on user feedback.",
-    tags: ["bug-fixes", "performance", "mobile", "dashboard"],
-    changes: [
-      {
-        type: "fix",
-        text: "Fixed authentication timeout issues in mobile apps",
-      },
-      { type: "fix", text: "Resolved memory leak in dashboard components" },
-      {
-        type: "improvement",
-        text: "Improved loading times by 25% across all pages",
-      },
-      { type: "fix", text: "Fixed export functionality for large datasets" },
-    ],
-  },
-  {
-    id: "2",
-    version: "2.4.0",
-    date: "2025-01-08",
-    type: "minor",
-    title: "New Dashboard Features",
-    description:
-      "Introducing enhanced analytics and customizable dashboard widgets.",
-    tags: ["dashboard", "analytics", "widgets", "mobile", "dark-mode"],
-    changes: [
-      { type: "feature", text: "Added customizable dashboard widgets" },
-      { type: "feature", text: "New analytics charts with real-time data" },
-      { type: "improvement", text: "Enhanced mobile responsiveness" },
-      { type: "feature", text: "Dark mode support for all components" },
-    ],
-  },
-  {
-    id: "3",
-    version: "2.3.2",
-    date: "2024-12-20",
-    type: "patch",
-    title: "Holiday Security Update",
-    description: "Important security patches and stability improvements.",
-    tags: ["security", "patches", "xss", "authentication"],
-    changes: [
-      { type: "security", text: "Patched XSS vulnerability in user profiles" },
-      { type: "security", text: "Updated authentication encryption standards" },
-      { type: "fix", text: "Fixed timezone display issues" },
-      { type: "improvement", text: "Improved error handling and logging" },
-    ],
-  },
-  {
-    id: "4",
-    version: "2.3.1",
-    date: "2024-12-15",
-    type: "patch",
-    title: "Quick Fixes",
-    description: "Addressing critical issues reported by our community.",
-    tags: ["bug-fixes", "search", "file-upload", "ux"],
-    changes: [
-      {
-        type: "fix",
-        text: "Fixed search functionality not working with special characters",
-      },
-      { type: "fix", text: "Resolved file upload timeout issues" },
-      {
-        type: "improvement",
-        text: "Better error messages for failed operations",
-      },
-    ],
-  },
-  {
-    id: "5",
-    version: "2.3.0",
-    date: "2024-12-01",
-    type: "minor",
-    title: "Enhanced User Experience",
-    description: "Major UX improvements and new collaboration features.",
-    tags: ["ux", "collaboration", "notifications", "accessibility", "search"],
-    changes: [
-      { type: "feature", text: "Real-time collaboration on documents" },
-      {
-        type: "feature",
-        text: "New notification system with granular controls",
-      },
-      {
-        type: "improvement",
-        text: "Redesigned navigation with improved accessibility",
-      },
-      { type: "feature", text: "Advanced search with filters and sorting" },
-      { type: "improvement", text: "Faster page transitions and animations" },
-    ],
-  },
-  {
-    id: "6",
-    version: "2.2.3",
-    date: "2024-11-28",
-    type: "patch",
-    title: "Thanksgiving Update",
-    description: "Small but important fixes for a smoother experience.",
-    tags: ["bug-fixes", "calendar", "mobile", "performance"],
-    changes: [
-      {
-        type: "fix",
-        text: "Fixed calendar sync issues with external providers",
-      },
-      { type: "fix", text: "Resolved layout breaking on very small screens" },
-      { type: "improvement", text: "Optimized images for faster loading" },
-    ],
-  },
-  {
-    id: "7",
-    version: "2.2.2",
-    date: "2024-11-15",
-    type: "patch",
-    title: "Stability Improvements",
-    description: "Backend optimizations and bug fixes.",
-    tags: ["backend", "performance", "database", "security", "file-upload"],
-    changes: [
-      { type: "fix", text: "Fixed database connection pooling issues" },
-      { type: "improvement", text: "Reduced API response times by 40%" },
-      {
-        type: "fix",
-        text: "Fixed rare crash when handling large file uploads",
-      },
-      { type: "security", text: "Enhanced rate limiting to prevent abuse" },
-    ],
-  },
-  {
-    id: "8",
-    version: "2.2.1",
-    date: "2024-11-08",
-    type: "patch",
-    title: "Quick Bug Fixes",
-    description: "Addressing urgent issues from the 2.2.0 release.",
-    tags: ["bug-fixes", "payments", "notifications", "validation"],
-    changes: [
-      { type: "fix", text: "Fixed critical bug in payment processing" },
-      { type: "fix", text: "Resolved email notification delivery issues" },
-      { type: "improvement", text: "Better validation for form inputs" },
-    ],
-  },
-  {
-    id: "9",
-    version: "2.2.0",
-    date: "2024-11-01",
-    type: "minor",
-    title: "Payment System Overhaul",
-    description: "Complete redesign of our payment and billing system.",
-    tags: ["payments", "dashboard", "analytics", "security", "enterprise"],
-    changes: [
-      {
-        type: "feature",
-        text: "New payment dashboard with detailed analytics",
-      },
-      { type: "feature", text: "Support for multiple payment methods" },
-      { type: "feature", text: "Automated invoice generation and delivery" },
-      { type: "improvement", text: "Enhanced security for payment processing" },
-      {
-        type: "feature",
-        text: "Subscription management for enterprise customers",
-      },
-    ],
-  },
-];
-
 const ReleaseNotesApp = () => {
   // Email subscription states
   const [email, setEmail] = useState("");
@@ -183,6 +13,8 @@ const ReleaseNotesApp = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isUnsubscribed, setIsUnsubscribed] = useState(false);
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
 
   // Filter states
   const [selectedMonth, setSelectedMonth] = useState("all");
@@ -194,7 +26,9 @@ const ReleaseNotesApp = () => {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   // Release notes states
-  const [releaseNotes, setReleaseNotes] = useState(initialReleaseNotes);
+  const [releaseNotes, setReleaseNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [editingNote, setEditingNote] = useState(null);
   const [editingData, setEditingData] = useState(null);
   const [newNote, setNewNote] = useState({
@@ -210,13 +44,39 @@ const ReleaseNotesApp = () => {
   // Refs
   const monthRefs = useRef({});
 
-  // Check admin access on component mount
+  // Fetch release notes from database
+  const fetchReleaseNotes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch("/api/release-notes");
+      const result = await response.json();
+
+      if (response.ok) {
+        setReleaseNotes(result.data);
+      } else {
+        setError(result.error || "Failed to fetch release notes");
+      }
+    } catch (error) {
+      console.error("Error fetching release notes:", error);
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Check admin access and fetch data on component mount
   useEffect(() => {
-    const checkAdminAccess = async () => {
+    const initializeApp = async () => {
       const hasAdminAccess = await isAdminIP();
       setIsAdmin(hasAdminAccess);
+
+      // Fetch release notes
+      await fetchReleaseNotes();
     };
-    checkAdminAccess();
+
+    initializeApp();
   }, []);
 
   // Computed values
@@ -234,24 +94,95 @@ const ReleaseNotesApp = () => {
     return monthMatch && tagMatch;
   });
 
-  // Email handlers
-  const handleSubscribe = (e) => {
+  // Email handlers with API calls
+  const handleSubscribe = async (e) => {
     e.preventDefault();
-    if (email && email.includes("@")) {
-      setIsSubscribed(true);
-      setEmail("");
-      setTimeout(() => setIsSubscribed(false), 3000);
+    if (!email || !email.includes("@")) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+
+    setEmailLoading(true);
+    setEmailError("");
+
+    try {
+      const response = await fetch("/api/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsSubscribed(true);
+        setEmail("");
+        setTimeout(() => setIsSubscribed(false), 3000);
+      } else {
+        // Handle specific error cases
+        if (response.status === 409) {
+          setEmailError("This email is already subscribed");
+        } else {
+          setEmailError(data.error || "Failed to subscribe. Please try again.");
+        }
+      }
+    } catch (error) {
+      console.error("Subscribe error:", error);
+      setEmailError("Network error. Please try again.");
+    } finally {
+      setEmailLoading(false);
     }
   };
 
-  const handleUnsubscribe = (e) => {
+  const handleUnsubscribe = async (e) => {
     e.preventDefault();
-    if (unsubscribeEmail && unsubscribeEmail.includes("@")) {
-      setIsUnsubscribed(true);
-      setUnsubscribeEmail("");
-      setTimeout(() => setIsUnsubscribed(false), 3000);
+    if (!unsubscribeEmail || !unsubscribeEmail.includes("@")) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+
+    setEmailLoading(true);
+    setEmailError("");
+
+    try {
+      const response = await fetch("/api/unsubscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: unsubscribeEmail }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsUnsubscribed(true);
+        setUnsubscribeEmail("");
+        setTimeout(() => setIsUnsubscribed(false), 3000);
+      } else {
+        // Handle specific error cases
+        if (response.status === 404) {
+          setEmailError("Email not found in our subscriber list");
+        } else {
+          setEmailError(
+            data.error || "Failed to unsubscribe. Please try again."
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Unsubscribe error:", error);
+      setEmailError("Network error. Please try again.");
+    } finally {
+      setEmailLoading(false);
     }
   };
+
+  // Clear error when switching between subscribe/unsubscribe
+  useEffect(() => {
+    setEmailError("");
+  }, [showUnsubscribe]);
 
   // Filter handlers
   const handleMonthSelect = (month) => {
@@ -270,8 +201,10 @@ const ReleaseNotesApp = () => {
   };
 
   // Admin handlers
-  const addNewNote = () => {
+  const addNewNote = async () => {
     if (newNote.version && newNote.title) {
+      // Instead of adding to state, we'll need to call the API
+      // For now, let's add to state and refresh from database
       const noteWithId = {
         ...newNote,
         id: Date.now().toString(),
@@ -287,11 +220,21 @@ const ReleaseNotesApp = () => {
         tags: [],
         changes: [{ type: "feature", text: "" }],
       });
+
+      // TODO: Later we'll replace this with API call and refresh
+      // For now, refresh from database after a brief delay
+      setTimeout(() => {
+        fetchReleaseNotes();
+      }, 100);
     }
   };
 
-  const deleteNote = (id) => {
+  const deleteNote = async (id) => {
+    // Remove from state immediately for better UX
     setReleaseNotes(releaseNotes.filter((note) => note.id !== id));
+
+    // TODO: Later we'll add API call to delete from database
+    // For now, the note will come back on next refresh since we're not actually deleting from DB
   };
 
   const startEditing = (note) => {
@@ -366,6 +309,36 @@ const ReleaseNotesApp = () => {
     }
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading release notes...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">⚠️</div>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={fetchReleaseNotes}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Render admin panel if shown
   if (showAdminPanel) {
     return (
@@ -405,6 +378,9 @@ const ReleaseNotesApp = () => {
         setShowUnsubscribe={setShowUnsubscribe}
         handleSubscribe={handleSubscribe}
         handleUnsubscribe={handleUnsubscribe}
+        emailLoading={emailLoading}
+        emailError={emailError}
+        setEmailError={setEmailError}
         selectedMonth={selectedMonth}
         selectedTags={selectedTags}
         uniqueMonths={uniqueMonths}

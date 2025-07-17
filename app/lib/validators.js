@@ -44,15 +44,6 @@ export const validateReleaseNote = (data) => {
     errors.push("Notes must be valid JSON content");
   }
 
-  // URL validation if provided
-  if (data.picture_url && data.picture_url.trim()) {
-    try {
-      new URL(data.picture_url);
-    } catch {
-      errors.push("Picture URL must be a valid URL");
-    }
-  }
-
   return {
     isValid: errors.length === 0,
     errors,
@@ -92,8 +83,6 @@ export const sanitizeReleaseNote = (data) => {
     type: data.type || "patch",
     tags: Array.isArray(data.tags) ? data.tags : [],
     notes: data.notes || {},
-    picture_url: data.picture_url?.trim() || null,
-    picture_path: data.picture_path?.trim() || null,
   };
 };
 

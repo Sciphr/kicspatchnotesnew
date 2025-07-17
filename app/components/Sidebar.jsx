@@ -1,7 +1,15 @@
 "use client";
 
 import React from "react";
-import { Bell, CheckCircle, Filter, Settings, UserX } from "lucide-react";
+import {
+  Bell,
+  CheckCircle,
+  Filter,
+  Settings,
+  UserX,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 
 const Sidebar = ({
   email,
@@ -14,6 +22,9 @@ const Sidebar = ({
   setShowUnsubscribe,
   handleSubscribe,
   handleUnsubscribe,
+  emailLoading,
+  emailError,
+  setEmailError,
   selectedMonth,
   selectedTags,
   uniqueMonths,
@@ -27,6 +38,17 @@ const Sidebar = ({
   isAdmin,
   setShowAdminPanel,
 }) => {
+  // Clear error when input changes
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+    if (emailError) setEmailError("");
+  };
+
+  const handleUnsubscribeEmailChange = (e) => {
+    setUnsubscribeEmail(e.target.value);
+    if (emailError) setEmailError("");
+  };
+
   return (
     <div className="w-96 bg-white shadow-lg flex flex-col h-screen fixed left-0 top-0 z-10">
       {/* Header - Always Visible */}
@@ -65,29 +87,50 @@ const Sidebar = ({
                 published.
               </p>
 
-              {isSubscribed ? (
-                <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded-md">
+              {/* Success Message */}
+              {isSubscribed && (
+                <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded-md mb-3">
                   <CheckCircle className="w-3 h-3" />
                   <span className="text-xs font-medium">
                     Successfully subscribed!
                   </span>
                 </div>
-              ) : (
-                <div className="space-y-2">
+              )}
+
+              {/* Error Message */}
+              {emailError && (
+                <div className="flex items-center gap-2 text-red-600 bg-red-50 p-2 rounded-md mb-3">
+                  <AlertCircle className="w-3 h-3" />
+                  <span className="text-xs font-medium">{emailError}</span>
+                </div>
+              )}
+
+              {/* Subscribe Form */}
+              {!isSubscribed && (
+                <form onSubmit={handleSubscribe} className="space-y-2">
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={handleEmailChange}
                     placeholder="Enter your email"
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs"
+                    disabled={emailLoading}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
                   <button
-                    onClick={handleSubscribe}
-                    className="w-full bg-blue-600 text-white py-1.5 px-3 rounded-md hover:bg-blue-700 transition-colors text-xs font-medium"
+                    type="submit"
+                    disabled={emailLoading || !email}
+                    className="w-full bg-blue-600 text-white py-1.5 px-3 rounded-md hover:bg-blue-700 transition-colors text-xs font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Subscribe to Updates
+                    {emailLoading ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Subscribing...
+                      </>
+                    ) : (
+                      "Subscribe to Updates"
+                    )}
                   </button>
-                </div>
+                </form>
               )}
             </>
           ) : (
@@ -97,29 +140,50 @@ const Sidebar = ({
                 notifications.
               </p>
 
-              {isUnsubscribed ? (
-                <div className="flex items-center gap-2 text-orange-600 bg-orange-50 p-2 rounded-md">
+              {/* Success Message */}
+              {isUnsubscribed && (
+                <div className="flex items-center gap-2 text-orange-600 bg-orange-50 p-2 rounded-md mb-3">
                   <CheckCircle className="w-3 h-3" />
                   <span className="text-xs font-medium">
                     Successfully unsubscribed!
                   </span>
                 </div>
-              ) : (
-                <div className="space-y-2">
+              )}
+
+              {/* Error Message */}
+              {emailError && (
+                <div className="flex items-center gap-2 text-red-600 bg-red-50 p-2 rounded-md mb-3">
+                  <AlertCircle className="w-3 h-3" />
+                  <span className="text-xs font-medium">{emailError}</span>
+                </div>
+              )}
+
+              {/* Unsubscribe Form */}
+              {!isUnsubscribed && (
+                <form onSubmit={handleUnsubscribe} className="space-y-2">
                   <input
                     type="email"
                     value={unsubscribeEmail}
-                    onChange={(e) => setUnsubscribeEmail(e.target.value)}
+                    onChange={handleUnsubscribeEmailChange}
                     placeholder="Enter your email"
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-xs"
+                    disabled={emailLoading}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-xs disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
                   <button
-                    onClick={handleUnsubscribe}
-                    className="w-full bg-orange-600 text-white py-1.5 px-3 rounded-md hover:bg-orange-700 transition-colors text-xs font-medium"
+                    type="submit"
+                    disabled={emailLoading || !unsubscribeEmail}
+                    className="w-full bg-orange-600 text-white py-1.5 px-3 rounded-md hover:bg-orange-700 transition-colors text-xs font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Unsubscribe
+                    {emailLoading ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Unsubscribing...
+                      </>
+                    ) : (
+                      "Unsubscribe"
+                    )}
                   </button>
-                </div>
+                </form>
               )}
             </>
           )}
