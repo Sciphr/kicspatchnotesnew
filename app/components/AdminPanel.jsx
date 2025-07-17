@@ -8,6 +8,12 @@ import {
   Trash2,
   Loader2,
   AlertCircle,
+  Mail,
+  Send,
+  TestTube,
+  Users,
+  CheckCircle,
+  Clock,
 } from "lucide-react";
 
 const getVersionBadgeColor = (type) => {
@@ -59,6 +65,14 @@ const AdminPanel = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("releases");
+
+  // Email sending states
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [emailSuccess, setEmailSuccess] = useState("");
+  const [testEmail, setTestEmail] = useState("");
+  const [selectedReleaseForEmail, setSelectedReleaseForEmail] = useState("");
 
   const handleAddNewNote = async () => {
     setLoading(true);
@@ -95,6 +109,107 @@ const AdminPanel = ({
       setError("Failed to update release note. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Email validation function
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!selectedReleaseForEmail) {
+      setEmailError("Please select a release note to send");
+      return;
+    }
+
+    if (!testEmail || !isValidEmail(testEmail)) {
+      setEmailError("Please enter a valid test email address");
+      return;
+    }
+
+    setEmailSending(true);
+    setEmailError("");
+    setEmailSuccess("");
+
+    try {
+      const response = await fetch("/api/send-emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          releaseNoteId: selectedReleaseForEmail,
+          testEmail: testEmail,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEmailSuccess(`Test email sent successfully to ${testEmail}! 🎉`);
+        setTestEmail("");
+        setTimeout(() => setEmailSuccess(""), 5000);
+      } else {
+        setEmailError(data.error || "Failed to send test email");
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      setEmailError("Network error. Please try again.");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const handleSendToAllSubscribers = async () => {
+    if (!selectedReleaseForEmail) {
+      setEmailError("Please select a release note to send");
+      return;
+    }
+
+    const selectedRelease = releaseNotes.find(
+      (note) => note.id === selectedReleaseForEmail
+    );
+
+    if (
+      !window.confirm(
+        `Are you sure you want to send "${selectedRelease?.title}" to ALL subscribers? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    setEmailSending(true);
+    setEmailError("");
+    setEmailSuccess("");
+
+    try {
+      const response = await fetch("/api/send-emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          releaseNoteId: selectedReleaseForEmail,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEmailSuccess(
+          `📧 ${data.message}! Sent: ${data.results.sent}, Failed: ${data.results.failed}`
+        );
+        setTimeout(() => setEmailSuccess(""), 10000);
+      } else {
+        setEmailError(data.error || "Failed to send emails to subscribers");
+      }
+    } catch (error) {
+      console.error("Error sending emails:", error);
+      setEmailError("Network error. Please try again.");
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -135,242 +250,266 @@ const AdminPanel = ({
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Add New Release */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              Add New Release
-            </h2>
+        {/* Tab Navigation */}
+        <div className="mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab("releases")}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "releases"
+                    ? "border-purple-500 text-purple-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                📝 Release Management
+              </button>
+              <button
+                onClick={() => setActiveTab("emails")}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "emails"
+                    ? "border-purple-500 text-purple-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                📧 Email Notifications
+              </button>
+            </nav>
+          </div>
+        </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+        {/* Tab Content */}
+        {activeTab === "releases" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Add New Release */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Add New Release
+              </h2>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Version
+                    </label>
+                    <input
+                      type="text"
+                      value={newNote.version}
+                      onChange={(e) =>
+                        setNewNote({ ...newNote, version: e.target.value })
+                      }
+                      placeholder={`e.g., ${getNextVersionSuggestion(
+                        releaseNotes
+                      )}`}
+                      disabled={loading}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={newNote.date}
+                      onChange={(e) =>
+                        setNewNote({ ...newNote, date: e.target.value })
+                      }
+                      disabled={loading}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Version
+                    Release Type
+                  </label>
+                  <select
+                    value={newNote.type}
+                    onChange={(e) =>
+                      setNewNote({ ...newNote, type: e.target.value })
+                    }
+                    disabled={loading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
+                  >
+                    <option value="patch">Patch</option>
+                    <option value="minor">Minor</option>
+                    <option value="major">Major</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Title
                   </label>
                   <input
                     type="text"
-                    value={newNote.version}
+                    value={newNote.title}
                     onChange={(e) =>
-                      setNewNote({ ...newNote, version: e.target.value })
+                      setNewNote({ ...newNote, title: e.target.value })
                     }
-                    placeholder={`e.g., ${getNextVersionSuggestion(
-                      releaseNotes
-                    )}`}
+                    placeholder="e.g., Bug Fixes and Performance Improvements"
                     disabled={loading}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date
+                    Description
                   </label>
-                  <input
-                    type="date"
-                    value={newNote.date}
+                  <textarea
+                    value={newNote.description}
                     onChange={(e) =>
-                      setNewNote({ ...newNote, date: e.target.value })
+                      setNewNote({ ...newNote, description: e.target.value })
                     }
+                    placeholder="Brief description of this release..."
+                    rows={3}
                     disabled={loading}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Release Type
-                </label>
-                <select
-                  value={newNote.type}
-                  onChange={(e) =>
-                    setNewNote({ ...newNote, type: e.target.value })
-                  }
-                  disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
-                >
-                  <option value="patch">Patch</option>
-                  <option value="minor">Minor</option>
-                  <option value="major">Major</option>
-                </select>
-              </div>
+                {/* Tags */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tags
+                  </label>
+                  <input
+                    type="text"
+                    value={newNoteTagsInput}
+                    onChange={(e) => {
+                      setNewNoteTagsInput(e.target.value);
+                    }}
+                    onBlur={(e) => {
+                      const tags = e.target.value
+                        .split(",")
+                        .map((tag) => tag.trim())
+                        .filter((tag) => tag !== "")
+                        .map((tag) => tag.toLowerCase().replace(/\s+/g, "-"));
+                      setNewNote({ ...newNote, tags });
+                    }}
+                    onFocus={() => {
+                      if (newNoteTagsInput === "") {
+                        setNewNoteTagsInput(newNote.tags.join(", "));
+                      }
+                    }}
+                    placeholder="e.g., bug-fixes, performance, mobile (comma-separated)"
+                    disabled={loading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter tags separated by commas. Spaces will be converted to
+                    hyphens when you finish typing.
+                  </p>
+                  {newNote.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {newNote.tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  value={newNote.title}
-                  onChange={(e) =>
-                    setNewNote({ ...newNote, title: e.target.value })
-                  }
-                  placeholder="e.g., Bug Fixes and Performance Improvements"
-                  disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={newNote.description}
-                  onChange={(e) =>
-                    setNewNote({ ...newNote, description: e.target.value })
-                  }
-                  placeholder="Brief description of this release..."
-                  rows={3}
-                  disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
-                />
-              </div>
-
-              {/* Tags */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tags
-                </label>
-                <input
-                  type="text"
-                  value={newNoteTagsInput}
-                  onChange={(e) => {
-                    setNewNoteTagsInput(e.target.value);
-                  }}
-                  onBlur={(e) => {
-                    // Process the tags when user finishes typing
-                    const tags = e.target.value
-                      .split(",")
-                      .map((tag) => tag.trim())
-                      .filter((tag) => tag !== "")
-                      .map((tag) => tag.toLowerCase().replace(/\s+/g, "-"));
-                    setNewNote({ ...newNote, tags });
-                  }}
-                  onFocus={() => {
-                    // When focusing, show the current tags as comma-separated
-                    if (newNoteTagsInput === "") {
-                      setNewNoteTagsInput(newNote.tags.join(", "));
-                    }
-                  }}
-                  placeholder="e.g., bug-fixes, performance, mobile (comma-separated)"
-                  disabled={loading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter tags separated by commas. Spaces will be converted to
-                  hyphens when you finish typing.
-                </p>
-                {newNote.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {newNote.tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded-full"
-                      >
-                        {tag}
-                      </span>
+                {/* Changes */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Changes
+                    </label>
+                    <button
+                      onClick={addChangeToNewNote}
+                      disabled={loading}
+                      className="text-purple-600 hover:text-purple-700 text-sm font-medium disabled:text-gray-400"
+                    >
+                      + Add Change
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {newNote.changes.map((change, index) => (
+                      <div key={index} className="flex gap-2">
+                        <select
+                          value={change.type}
+                          onChange={(e) =>
+                            updateNewNoteChange(index, "type", e.target.value)
+                          }
+                          disabled={loading}
+                          className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
+                        >
+                          <option value="feature">Feature</option>
+                          <option value="improvement">Improvement</option>
+                          <option value="fix">Fix</option>
+                          <option value="security">Security</option>
+                        </select>
+                        <input
+                          type="text"
+                          value={change.text}
+                          onChange={(e) =>
+                            updateNewNoteChange(index, "text", e.target.value)
+                          }
+                          placeholder="Describe the change..."
+                          disabled={loading}
+                          className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
+                        />
+                        {newNote.changes.length > 1 && (
+                          <button
+                            onClick={() => removeChangeFromNewNote(index)}
+                            disabled={loading}
+                            className="text-red-500 hover:text-red-700 px-2 disabled:text-gray-400"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
-                )}
-              </div>
-
-              {/* Changes */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Changes
-                  </label>
-                  <button
-                    onClick={addChangeToNewNote}
-                    disabled={loading}
-                    className="text-purple-600 hover:text-purple-700 text-sm font-medium disabled:text-gray-400"
-                  >
-                    + Add Change
-                  </button>
                 </div>
-                <div className="space-y-3">
-                  {newNote.changes.map((change, index) => (
-                    <div key={index} className="flex gap-2">
-                      <select
-                        value={change.type}
-                        onChange={(e) =>
-                          updateNewNoteChange(index, "type", e.target.value)
-                        }
-                        disabled={loading}
-                        className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
-                      >
-                        <option value="feature">Feature</option>
-                        <option value="improvement">Improvement</option>
-                        <option value="fix">Fix</option>
-                        <option value="security">Security</option>
-                      </select>
-                      <input
-                        type="text"
-                        value={change.text}
-                        onChange={(e) =>
-                          updateNewNoteChange(index, "text", e.target.value)
-                        }
-                        placeholder="Describe the change..."
-                        disabled={loading}
-                        className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
-                      />
-                      {newNote.changes.length > 1 && (
-                        <button
-                          onClick={() => removeChangeFromNewNote(index)}
-                          disabled={loading}
-                          className="text-red-500 hover:text-red-700 px-2 disabled:text-gray-400"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-              <button
-                onClick={handleAddNewNote}
-                disabled={!newNote.version || !newNote.title || loading}
-                className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    Add Release Note
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Existing Releases */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
-              <Edit className="w-5 h-5" />
-              Manage Releases ({releaseNotes.length})
-            </h2>
-
-            <div className="space-y-4 max-h-[calc(100vh-350px)] overflow-y-auto pb-4">
-              {releaseNotes.map((note) => (
-                <div
-                  key={note.id}
-                  className="border border-gray-200 rounded-lg p-4"
+                <button
+                  onClick={handleAddNewNote}
+                  disabled={!newNote.version || !newNote.title || loading}
+                  className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
                 >
-                  {editingNote === note.id ? (
-                    // Edit Mode
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Version
-                          </label>
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Add Release Note
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Existing Releases */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                <Edit className="w-5 h-5" />
+                Manage Releases ({releaseNotes.length})
+              </h2>
+
+              <div className="space-y-4 max-h-[calc(100vh-350px)] overflow-y-auto pb-4">
+                {releaseNotes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="border border-gray-200 rounded-lg p-4"
+                  >
+                    {editingNote === note.id ? (
+                      // Edit Mode
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-2">
                           <input
                             type="text"
                             value={editingData.version}
@@ -380,14 +519,10 @@ const AdminPanel = ({
                                 version: e.target.value,
                               })
                             }
+                            placeholder="Version"
                             disabled={loading}
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                           />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Date
-                          </label>
                           <input
                             type="date"
                             value={editingData.date}
@@ -401,12 +536,7 @@ const AdminPanel = ({
                             className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                           />
                         </div>
-                      </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Type
-                        </label>
                         <select
                           value={editingData.type}
                           onChange={(e) =>
@@ -422,12 +552,7 @@ const AdminPanel = ({
                           <option value="minor">Minor</option>
                           <option value="major">Major</option>
                         </select>
-                      </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Title
-                        </label>
                         <input
                           type="text"
                           value={editingData.title}
@@ -437,15 +562,11 @@ const AdminPanel = ({
                               title: e.target.value,
                             })
                           }
+                          placeholder="Title"
                           disabled={loading}
                           className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                         />
-                      </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Description
-                        </label>
                         <textarea
                           value={editingData.description}
                           onChange={(e) =>
@@ -454,207 +575,384 @@ const AdminPanel = ({
                               description: e.target.value,
                             })
                           }
+                          placeholder="Description"
                           rows={2}
                           disabled={loading}
                           className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                         />
-                      </div>
 
-                      {/* Tags */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Tags
-                        </label>
-                        <input
-                          type="text"
-                          value={editingTagsInput}
-                          onChange={(e) => {
-                            setEditingTagsInput(e.target.value);
-                          }}
-                          onBlur={(e) => {
-                            // Process the tags when user finishes typing
-                            const tags = e.target.value
-                              .split(",")
-                              .map((tag) => tag.trim())
-                              .filter((tag) => tag !== "")
-                              .map((tag) =>
-                                tag.toLowerCase().replace(/\s+/g, "-")
-                              );
-                            setEditingData({ ...editingData, tags });
-                          }}
-                          onFocus={() => {
-                            // When focusing, show the current tags as comma-separated
-                            if (editingTagsInput === "") {
-                              setEditingTagsInput(
-                                editingData.tags
-                                  ? editingData.tags.join(", ")
-                                  : ""
-                              );
-                            }
-                          }}
-                          placeholder="e.g., bug-fixes, performance, mobile"
-                          disabled={loading}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
-                        />
-                        {editingData.tags && editingData.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {editingData.tags.map((tag, index) => (
-                              <span
-                                key={index}
-                                className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded-full"
-                              >
-                                {tag}
-                              </span>
+                        {/* Tags */}
+                        <div>
+                          <input
+                            type="text"
+                            value={editingTagsInput}
+                            onChange={(e) => {
+                              setEditingTagsInput(e.target.value);
+                            }}
+                            onBlur={(e) => {
+                              const tags = e.target.value
+                                .split(",")
+                                .map((tag) => tag.trim())
+                                .filter((tag) => tag !== "")
+                                .map((tag) =>
+                                  tag.toLowerCase().replace(/\s+/g, "-")
+                                );
+                              setEditingData({ ...editingData, tags });
+                            }}
+                            onFocus={() => {
+                              if (editingTagsInput === "") {
+                                setEditingTagsInput(
+                                  editingData.tags
+                                    ? editingData.tags.join(", ")
+                                    : ""
+                                );
+                              }
+                            }}
+                            placeholder="Tags (comma-separated)"
+                            disabled={loading}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
+                          />
+                          {editingData.tags && editingData.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {editingData.tags.map((tag, index) => (
+                                <span
+                                  key={index}
+                                  className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-700 rounded-full"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Changes */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="block text-xs font-medium text-gray-700">
+                              Changes
+                            </label>
+                            <button
+                              onClick={addChangeToEditing}
+                              disabled={loading}
+                              className="text-purple-600 hover:text-purple-700 text-xs font-medium disabled:text-gray-400"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {editingData.changes.map((change, index) => (
+                              <div key={index} className="flex gap-2">
+                                <select
+                                  value={change.type}
+                                  onChange={(e) =>
+                                    updateEditingChange(
+                                      index,
+                                      "type",
+                                      e.target.value
+                                    )
+                                  }
+                                  disabled={loading}
+                                  className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
+                                >
+                                  <option value="feature">Feature</option>
+                                  <option value="improvement">
+                                    Improvement
+                                  </option>
+                                  <option value="fix">Fix</option>
+                                  <option value="security">Security</option>
+                                </select>
+                                <input
+                                  type="text"
+                                  value={change.text}
+                                  onChange={(e) =>
+                                    updateEditingChange(
+                                      index,
+                                      "text",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Change description"
+                                  disabled={loading}
+                                  className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
+                                />
+                                {editingData.changes.length > 1 && (
+                                  <button
+                                    onClick={() =>
+                                      removeChangeFromEditing(index)
+                                    }
+                                    disabled={loading}
+                                    className="text-red-500 hover:text-red-700 px-1 disabled:text-gray-400"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
                             ))}
                           </div>
-                        )}
-                      </div>
+                        </div>
 
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-xs font-medium text-gray-700">
-                            Changes
-                          </label>
+                        <div className="flex gap-2 pt-2">
                           <button
-                            onClick={addChangeToEditing}
-                            disabled={loading}
-                            className="text-purple-600 hover:text-purple-700 text-xs font-medium disabled:text-gray-400"
+                            onClick={handleSaveEdit}
+                            disabled={
+                              !editingData.version ||
+                              !editingData.title ||
+                              loading
+                            }
+                            className="flex-1 bg-green-600 text-white py-1 px-3 rounded text-sm hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-1"
                           >
-                            + Add
+                            {loading ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Saving...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="w-3 h-3" />
+                                Save
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            disabled={loading}
+                            className="flex-1 bg-gray-500 text-white py-1 px-3 rounded text-sm hover:bg-gray-600 disabled:bg-gray-300 transition-colors font-medium"
+                          >
+                            Cancel
                           </button>
                         </div>
-                        <div className="space-y-2">
-                          {editingData.changes.map((change, index) => (
-                            <div key={index} className="flex gap-2">
-                              <select
-                                value={change.type}
-                                onChange={(e) =>
-                                  updateEditingChange(
-                                    index,
-                                    "type",
-                                    e.target.value
-                                  )
-                                }
-                                disabled={loading}
-                                className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
-                              >
-                                <option value="feature">Feature</option>
-                                <option value="improvement">Improvement</option>
-                                <option value="fix">Fix</option>
-                                <option value="security">Security</option>
-                              </select>
-                              <input
-                                type="text"
-                                value={change.text}
-                                onChange={(e) =>
-                                  updateEditingChange(
-                                    index,
-                                    "text",
-                                    e.target.value
-                                  )
-                                }
-                                disabled={loading}
-                                className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
-                              />
-                              {editingData.changes.length > 1 && (
-                                <button
-                                  onClick={() => removeChangeFromEditing(index)}
-                                  disabled={loading}
-                                  className="text-red-500 hover:text-red-700 px-1 disabled:text-gray-400"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                          ))}
+                      </div>
+                    ) : (
+                      // View Mode
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span
+                              className={`px-2 py-1 text-xs font-medium rounded border ${getVersionBadgeColor(
+                                note.type
+                              )}`}
+                            >
+                              v{note.version}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {formatDate(note.date)}
+                            </span>
+                          </div>
+                          <h4 className="font-medium text-gray-900 mb-1 text-sm">
+                            {note.title}
+                          </h4>
+                          <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                            {note.description}
+                          </p>
+                          <div className="text-xs text-gray-500">
+                            {note.changes.length} change
+                            {note.changes.length !== 1 ? "s" : ""}
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={handleSaveEdit}
-                          disabled={
-                            !editingData.version ||
-                            !editingData.title ||
-                            loading
-                          }
-                          className="flex-1 bg-green-600 text-white py-1 px-3 rounded text-sm hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-1"
-                        >
-                          {loading ? (
-                            <>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="w-3 h-3" />
-                              Save
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={cancelEditing}
-                          disabled={loading}
-                          className="flex-1 bg-gray-500 text-white py-1 px-3 rounded text-sm hover:bg-gray-600 disabled:bg-gray-300 transition-colors font-medium"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    // View Mode
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span
-                            className={`px-2 py-1 text-xs font-medium rounded border ${getVersionBadgeColor(
-                              note.type
-                            )}`}
+                        <div className="flex gap-2 ml-3">
+                          <button
+                            onClick={() => startEditing(note)}
+                            disabled={loading}
+                            className="text-blue-500 hover:text-blue-700 disabled:text-gray-400"
                           >
-                            v{note.version}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {formatDate(note.date)}
-                          </span>
-                        </div>
-                        <h4 className="font-medium text-gray-900 mb-1">
-                          {note.title}
-                        </h4>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {note.description}
-                        </p>
-                        <div className="text-xs text-gray-500">
-                          {note.changes.length} change
-                          {note.changes.length !== 1 ? "s" : ""}
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteNote(note.id)}
+                            disabled={loading}
+                            className="text-red-500 hover:text-red-700 disabled:text-gray-400"
+                          >
+                            {loading ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </button>
                         </div>
                       </div>
-                      <div className="flex gap-2 ml-3">
-                        <button
-                          onClick={() => startEditing(note)}
-                          disabled={loading}
-                          className="text-blue-500 hover:text-blue-700 disabled:text-gray-400"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteNote(note.id)}
-                          disabled={loading}
-                          className="text-red-500 hover:text-red-700 disabled:text-gray-400"
-                        >
-                          {loading ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          // Email Notifications Tab
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-lg border border-gray-200 p-8">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-8 flex items-center gap-3">
+                <Mail className="w-6 h-6" />
+                Email Notifications
+              </h2>
+
+              <div className="space-y-8">
+                {/* Success Message */}
+                {emailSuccess && (
+                  <div className="flex items-center gap-2 text-green-700 bg-green-50 p-4 rounded-md border border-green-200">
+                    <CheckCircle className="w-5 h-5" />
+                    <span className="text-sm font-medium">{emailSuccess}</span>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {emailError && (
+                  <div className="flex items-center gap-2 text-red-700 bg-red-50 p-4 rounded-md border border-red-200">
+                    <AlertCircle className="w-5 h-5" />
+                    <span className="text-sm font-medium">{emailError}</span>
+                    <button
+                      onClick={() => setEmailError("")}
+                      className="ml-auto text-red-500 hover:text-red-700"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Release Selection */}
+                <div>
+                  <label className="block text-lg font-medium text-gray-700 mb-3">
+                    Select Release to Send
+                  </label>
+                  <select
+                    value={selectedReleaseForEmail}
+                    onChange={(e) => {
+                      setSelectedReleaseForEmail(e.target.value);
+                      setEmailError("");
+                    }}
+                    disabled={emailSending}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base disabled:bg-gray-100"
+                  >
+                    <option value="">Choose a release note...</option>
+                    {releaseNotes.map((note) => (
+                      <option key={note.id} value={note.id}>
+                        v{note.version} - {note.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Selected Release Preview */}
+                {selectedReleaseForEmail && (
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-base">
+                      <div className="font-medium text-blue-900 mb-2">
+                        Selected Release:
+                      </div>
+                      {(() => {
+                        const selected = releaseNotes.find(
+                          (note) => note.id === selectedReleaseForEmail
+                        );
+                        return selected ? (
+                          <div className="text-blue-800">
+                            <span className="font-medium">
+                              v{selected.version}
+                            </span>{" "}
+                            - {selected.title}
+                            <div className="text-sm mt-2">
+                              {selected.description}
+                            </div>
+                            <div className="text-sm mt-2">
+                              {selected.changes.length} change
+                              {selected.changes.length !== 1 ? "s" : ""}
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
+                  {/* Test Email Section */}
+                  <div className="border border-gray-200 rounded-lg p-6 flex flex-col">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <TestTube className="w-5 h-5" />
+                      Send Test Email
+                    </h3>
+                    <div className="space-y-4 flex-1">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Test Email Address
+                        </label>
+                        <input
+                          type="email"
+                          value={testEmail}
+                          onChange={(e) => {
+                            setTestEmail(e.target.value);
+                            setEmailError("");
+                          }}
+                          placeholder="your.email@example.com"
+                          disabled={emailSending}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base disabled:bg-gray-100"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSendTestEmail}
+                      disabled={
+                        emailSending ||
+                        !selectedReleaseForEmail ||
+                        !testEmail ||
+                        !isValidEmail(testEmail)
+                      }
+                      className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-base font-medium flex items-center justify-center gap-2 mt-4"
+                    >
+                      {emailSending ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Sending Test...
+                        </>
+                      ) : (
+                        <>
+                          <TestTube className="w-5 h-5" />
+                          Send Test Email
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Send to All Section */}
+                  <div className="border border-gray-200 rounded-lg p-6 flex flex-col">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Send to All Subscribers
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-yellow-50 rounded-md border border-yellow-200">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                          <div className="text-sm text-yellow-800">
+                            <div className="font-medium mb-1">Warning:</div>
+                            This will send the selected release note to ALL
+                            subscribers. This action cannot be undone.
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleSendToAllSubscribers}
+                        disabled={emailSending || !selectedReleaseForEmail}
+                        className="mt-auto w-full bg-red-600 text-white py-3 px-4 rounded-md hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-base font-medium flex items-center justify-center gap-2"
+                      >
+                        {emailSending ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Sending to All...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-5 h-5" />
+                            Send to All Subscribers
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

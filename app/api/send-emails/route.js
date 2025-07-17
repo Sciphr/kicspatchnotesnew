@@ -5,15 +5,11 @@ import { validateEmail, sanitizeEmail } from "../../lib/validators";
 import nodemailer from "nodemailer";
 
 // Create transporter for sending emails
-const createTransporter = () => {
-  return nodemailer.createTransporter({
+const createTransport = () => {
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT || 587,
     secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD,
-    },
   });
 };
 
@@ -70,7 +66,7 @@ const generateEmailHTML = (releaseNote) => {
           color: #374151;
           max-width: 600px;
           margin: 0 auto;
-          background-color: #f9fafb;
+          background-color: #ffffff;
           padding: 20px;
         }
         .container {
@@ -98,14 +94,16 @@ const generateEmailHTML = (releaseNote) => {
           font-size: 20px;
         }
         .version-badge {
-          display: inline-block;
-          padding: 4px 12px;
-          border-radius: 16px;
-          font-size: 12px;
-          font-weight: 600;
-          border: 1px solid;
-          ${getVersionBadgeStyle(releaseNote.type)}
-        }
+  display: inline-block;
+  padding: 4px 12px;  
+  border-radius: 16px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+  box-sizing: border-box;  
+  ${getVersionBadgeStyle(releaseNote.type)}
+}
         .title {
           font-size: 24px;
           font-weight: 700;
@@ -117,7 +115,7 @@ const generateEmailHTML = (releaseNote) => {
           font-size: 14px;
         }
         .description {
-          background-color: #f8fafc;
+          background-color: #ffffff;
           padding: 20px;
           border-radius: 8px;
           margin: 24px 0;
@@ -132,34 +130,20 @@ const generateEmailHTML = (releaseNote) => {
           color: #111827;
           margin-bottom: 16px;
         }
-        .change-item {
-          display: flex;
-          align-items: flex-start;
-          margin-bottom: 12px;
-          padding: 12px;
-          background-color: #f9fafb;
-          border-radius: 6px;
-        }
-        .change-icon {
-          margin-right: 12px;
-          font-size: 16px;
-        }
-        .change-text {
-          flex: 1;
-          color: #374151;
-        }
+   
         .tags {
           margin: 24px 0;
         }
         .tag {
           display: inline-block;
-          background-color: #f3f4f6;
+          background-color: #ffffff;
           color: #374151;
           padding: 4px 8px;
           border-radius: 12px;
           font-size: 12px;
-          margin-right: 8px;
+          margin-right: 12px;
           margin-bottom: 4px;
+          border: 1px solid #e5e7eb;
         }
         .footer {
           margin-top: 40px;
@@ -204,35 +188,47 @@ const generateEmailHTML = (releaseNote) => {
           <div class="tags">
             ${releaseNote.tags
               .map((tag) => `<span class="tag">${tag.replace("-", " ")}</span>`)
-              .join("")}
+              .join(" ")}
           </div>
         `
             : ""
         }
 
         <div class="changes-section">
-          <h3 class="changes-title">What's Changed:</h3>
-          ${releaseNote.changes
-            .map(
-              (change) => `
-            <div class="change-item">
-              <span class="change-icon">${getChangeIcon(change.type)}</span>
-              <div class="change-text">${change.text}</div>
-            </div>
-          `
-            )
-            .join("")}
-        </div>
+  <h3 class="changes-title">What's Changed:</h3>
+  <table width="100%" cellpadding="0" cellspacing="0">
+    ${releaseNote.changes
+      .map(
+        (change) => `
+      <tr>
+        <td width="20" style="padding: 8px 12px 8px 0; vertical-align: top; font-size: 16px;">
+          ${getChangeIcon(change.type)}
+        </td>
+        <td style="padding: 8px 0; vertical-align: top; color: #374151; line-height: 1.5;">
+          ${change.text}
+        </td>
+      </tr>
+    `
+      )
+      .join("")}
+  </table>
+</div>
 
         <div class="footer">
-          <p>Have questions about this release? Contact our support team.</p>
           <p style="margin-top: 16px;">
-            <a href="${
-              process.env.NEXTAUTH_URL || "http://localhost:3000"
-            }/unsubscribe?email={{EMAIL}}" class="unsubscribe">
-              Unsubscribe from these notifications
-            </a>
-          </p>
+  <a href="${process.env.SITE_URL || "http://localhost:3000"}"
+     style="color: #3b82f6; text-decoration: none; font-size: 14px; font-weight: 500;">
+    📋 Click here to view all KICS release notes
+  </a>
+</p>
+<p style="margin-top: 16px;">
+  <a href="${
+    process.env.SITE_URL || "http://localhost:3000"
+  }/unsubscribe?email={{EMAIL}}" 
+   class="unsubscribe">
+    Unsubscribe from these notifications
+  </a>
+</p>
         </div>
       </div>
     </body>
@@ -292,6 +288,7 @@ export async function POST(request) {
     const connection = await pool.getConnection();
     let releaseNote;
     let emailList = [];
+    let notificationId;
 
     try {
       // Fetch the release note
@@ -366,12 +363,23 @@ export async function POST(request) {
           { status: 400 }
         );
       }
+
+      // Create initial notification record (only for non-test emails)
+      if (!testEmail) {
+        const [notificationResult] = await connection.execute(
+          `INSERT INTO kics_email_notifications 
+           (release_note_id, email_count, status) 
+           VALUES (?, ?, 'pending')`,
+          [releaseNoteId, emailList.length]
+        );
+        notificationId = notificationResult.insertId;
+      }
     } finally {
       connection.release();
     }
 
     // Create email transporter
-    const transporter = createTransporter();
+    const transporter = createTransport();
 
     // Generate email content
     const htmlContent = generateEmailHTML(releaseNote);
@@ -381,9 +389,7 @@ export async function POST(request) {
     const emailPromises = emailList.map(async (email) => {
       try {
         await transporter.sendMail({
-          from: `"KICS Release Notes" <${
-            process.env.SMTP_FROM || process.env.SMTP_USER
-          }>`,
+          from: `"KICS Release Notes" <announcements@parklanesys.com>`,
           to: email,
           subject: `🚀 KICS v${releaseNote.version} Released - ${releaseNote.title}`,
           text: textContent,
@@ -399,25 +405,29 @@ export async function POST(request) {
     const results = await Promise.all(emailPromises);
     const successCount = results.filter((r) => r.status === "sent").length;
     const failureCount = results.filter((r) => r.status === "failed").length;
+    const failedEmails = results.filter((r) => r.status === "failed");
 
-    // Log the email notification in the database
-    if (!testEmail) {
+    // Update the email notification record (only for non-test emails)
+    if (!testEmail && notificationId) {
       const dbConnection = await pool.getConnection();
       try {
+        const finalStatus =
+          failureCount === 0 ? "sent" : successCount === 0 ? "failed" : "sent";
+        const errorMessage =
+          failedEmails.length > 0
+            ? `Failed to send to ${
+                failedEmails.length
+              } recipients: ${failedEmails.map((f) => f.email).join(", ")}`
+            : null;
+
         await dbConnection.execute(
-          `INSERT INTO kics_email_notifications 
-           (release_note_id, email_count, sent_count, failed_count, status, created_at) 
-           VALUES (?, ?, ?, ?, ?, NOW())`,
-          [
-            releaseNoteId,
-            emailList.length,
-            successCount,
-            failureCount,
-            failureCount === 0 ? "sent" : "partial",
-          ]
+          `UPDATE kics_email_notifications 
+           SET status = ?, error_message = ?, sent_at = NOW()
+           WHERE id = ?`,
+          [finalStatus, errorMessage, notificationId]
         );
       } catch (error) {
-        console.error("Failed to log email notification:", error);
+        console.error("Failed to update email notification:", error);
       } finally {
         dbConnection.release();
       }

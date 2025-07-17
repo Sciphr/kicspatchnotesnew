@@ -28,23 +28,3 @@ body {
 button {
   cursor: pointer;
 }
-
-.check-icon-enter {
-  opacity: 0;
-  transform: scale(0.8);
-}
-.check-icon-enter-active {
-  opacity: 1;
-  transform: scale(1);
-  transition: opacity 200ms ease-out, transform 200ms ease-out;
-}
-
-.check-icon-exit {
-  opacity: 1;
-  transform: scale(1);
-}
-.check-icon-exit-active {
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 150ms ease-in, transform 150ms ease-in;
-}

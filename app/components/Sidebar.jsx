@@ -297,15 +297,13 @@ const Sidebar = ({
               >
                 <span>All Months</span>
                 <div className="w-4 h-4 flex items-center justify-center">
-                  {selectedMonth === "all" && (
-                    <CheckCircle
-                      className={`w-4 h-4 text-blue-600 transition-all duration-200 ease-out ${
-                        selectedMonth === "all"
-                          ? "opacity-100 scale-100"
-                          : "opacity-0 scale-75"
-                      }`}
-                    />
-                  )}
+                  <CheckCircle
+                    className={`w-4 h-4 text-blue-600 transition-all duration-300 ease-out ${
+                      selectedMonth === "all"
+                        ? "opacity-100 scale-100"
+                        : "opacity-0 scale-75"
+                    }`}
+                  />
                 </div>
               </button>
 
@@ -323,15 +321,13 @@ const Sidebar = ({
                 >
                   <span>{month}</span>
                   <div className="w-4 h-4 flex items-center justify-center">
-                    {selectedMonth === month && (
-                      <CheckCircle
-                        className={`w-4 h-4 text-blue-600 transition-all duration-200 ease-out ${
-                          selectedMonth === month
-                            ? "opacity-100 scale-100"
-                            : "opacity-0 scale-75"
-                        }`}
-                      />
-                    )}
+                    <CheckCircle
+                      className={`w-4 h-4 text-blue-600 transition-all duration-300 ease-out ${
+                        selectedMonth === month
+                          ? "opacity-100 scale-100"
+                          : "opacity-0 scale-75"
+                      }`}
+                    />
                   </div>
                 </button>
               ))}
