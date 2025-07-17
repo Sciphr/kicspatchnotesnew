@@ -8,6 +8,7 @@ import {
   Filter,
   Settings,
   UserX,
+  X,
   AlertCircle,
   Loader2,
 } from "lucide-react";
@@ -41,6 +42,11 @@ const Sidebar = ({
 }) => {
   const [activeFilter, setActiveFilter] = useState(null);
 
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   // Clear error when input changes
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
@@ -54,11 +60,10 @@ const Sidebar = ({
 
   return (
     <div className="w-96 bg-white shadow-xl flex flex-col h-screen fixed left-0 top-0 z-10 border-r border-gray-100">
-      {/* Enhanced Header with gradient background */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 flex-shrink-0">
+      <div className=" border-b border-gray-200 flex-shrink-0">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
               <Bell className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -71,16 +76,16 @@ const Sidebar = ({
             </div>
           </div>
 
-          {/* Enhanced Email Subscription Card */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          {/* Compact Email Subscription Card */}
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-gray-900 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                 Get Notified
               </h3>
               <button
                 onClick={() => setShowUnsubscribe(!showUnsubscribe)}
-                className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 px-2 py-1 rounded-md hover:bg-gray-50 transition-colors"
+                className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-gray-50 transition-colors"
               >
                 <UserX className="w-3 h-3" />
                 {showUnsubscribe ? "Subscribe" : "Unsubscribe"}
@@ -89,61 +94,62 @@ const Sidebar = ({
 
             {!showUnsubscribe ? (
               <>
-                <p className="text-xs text-gray-600 mb-4 leading-relaxed">
-                  Subscribe to receive email notifications when new releases are
-                  published.
+                <p className="text-xs text-gray-600 mb-3 leading-relaxed">
+                  Get email notifications for new releases.
                 </p>
 
-                {/* Enhanced Success Message */}
+                {/* Compact Success Message */}
                 {isSubscribed && (
-                  <div className="flex items-center gap-2 text-green-700 bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg mb-3 border border-green-200 animate-in slide-in-from-top duration-300">
-                    <CheckCircle className="w-4 h-4" />
-                    <span className="text-xs font-medium">
-                      Successfully subscribed! 🎉
-                    </span>
+                  <div className="flex items-center gap-2 text-green-700 bg-gradient-to-r from-green-50 to-emerald-50 p-2 rounded-md mb-2 border border-green-200 animate-in slide-in-from-top duration-300">
+                    <CheckCircle className="w-3 h-3" />
+                    <span className="text-xs font-medium">Subscribed! 🎉</span>
                   </div>
                 )}
 
-                {/* Enhanced Error Message */}
+                {/* Compact Error Message */}
                 {emailError && (
-                  <div className="flex items-center gap-2 text-red-700 bg-gradient-to-r from-red-50 to-pink-50 p-3 rounded-lg mb-3 border border-red-200 animate-in slide-in-from-top duration-300">
-                    <AlertCircle className="w-4 h-4" />
+                  <div className="flex items-center gap-2 text-red-700 bg-gradient-to-r from-red-50 to-pink-50 p-2 rounded-md mb-2 border border-red-200 animate-in slide-in-from-top duration-300">
+                    <AlertCircle className="w-3 h-3" />
                     <span className="text-xs font-medium">{emailError}</span>
                   </div>
                 )}
 
-                {/* Enhanced Subscribe Form */}
+                {/* Compact Subscribe Form */}
                 {!isSubscribed && (
-                  <form onSubmit={handleSubscribe} className="space-y-3">
+                  <form onSubmit={handleSubscribe} className="space-y-2">
                     <div className="relative">
                       <input
                         type="email"
                         value={email}
                         onChange={handleEmailChange}
-                        placeholder="Enter your email"
+                        placeholder="Enter email"
                         disabled={emailLoading}
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm disabled:bg-gray-50 disabled:cursor-not-allowed transition-all duration-200 placeholder-gray-400"
+                        className="w-full px-2.5 py-1.5 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs disabled:bg-gray-50 disabled:cursor-not-allowed transition-all duration-200 placeholder-gray-400"
                       />
                       {email && !emailLoading && (
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                          {isValidEmail(email) ? (
+                            <CheckCircle className="w-3 h-3 text-green-500" />
+                          ) : (
+                            <X className="w-3 h-3 text-red-500" />
+                          )}
                         </div>
                       )}
                     </div>
                     <button
                       type="submit"
-                      disabled={emailLoading || !email}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 px-4 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-sm font-medium disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md transform hover:scale-[1.02] disabled:transform-none"
+                      disabled={emailLoading || !email || !isValidEmail(email)}
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-1.5 px-3 rounded-md hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-xs font-medium disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transform hover:scale-[1.02] disabled:transform-none"
                     >
                       {emailLoading ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-3 h-3 animate-spin" />
                           Subscribing...
                         </>
                       ) : (
                         <>
-                          <Bell className="w-4 h-4" />
-                          Subscribe to Updates
+                          <Bell className="w-3 h-3" />
+                          Subscribe
                         </>
                       )}
                     </button>
@@ -151,59 +157,66 @@ const Sidebar = ({
                 )}
               </>
             ) : (
-              // Similar enhancements for unsubscribe section...
+              // Compact unsubscribe section
               <>
-                <p className="text-xs text-gray-600 mb-4 leading-relaxed">
-                  Enter your email address to unsubscribe from release
-                  notifications.
+                <p className="text-xs text-gray-600 mb-3 leading-relaxed">
+                  Enter email to unsubscribe from notifications.
                 </p>
 
                 {isUnsubscribed && (
-                  <div className="flex items-center gap-2 text-orange-700 bg-gradient-to-r from-orange-50 to-amber-50 p-3 rounded-lg mb-3 border border-orange-200 animate-in slide-in-from-top duration-300">
-                    <CheckCircle className="w-4 h-4" />
+                  <div className="flex items-center gap-2 text-orange-700 bg-gradient-to-r from-orange-50 to-amber-50 p-2 rounded-md mb-2 border border-orange-200 animate-in slide-in-from-top duration-300">
+                    <CheckCircle className="w-3 h-3" />
                     <span className="text-xs font-medium">
-                      Successfully unsubscribed! 👋
+                      Unsubscribed! 👋
                     </span>
                   </div>
                 )}
 
                 {emailError && (
-                  <div className="flex items-center gap-2 text-red-700 bg-gradient-to-r from-red-50 to-pink-50 p-3 rounded-lg mb-3 border border-red-200 animate-in slide-in-from-top duration-300">
-                    <AlertCircle className="w-4 h-4" />
+                  <div className="flex items-center gap-2 text-red-700 bg-gradient-to-r from-red-50 to-pink-50 p-2 rounded-md mb-2 border border-red-200 animate-in slide-in-from-top duration-300">
+                    <AlertCircle className="w-3 h-3" />
                     <span className="text-xs font-medium">{emailError}</span>
                   </div>
                 )}
 
                 {!isUnsubscribed && (
-                  <form onSubmit={handleUnsubscribe} className="space-y-3">
+                  <form onSubmit={handleUnsubscribe} className="space-y-2">
                     <div className="relative">
                       <input
                         type="email"
                         value={unsubscribeEmail}
                         onChange={handleUnsubscribeEmailChange}
-                        placeholder="Enter your email"
+                        placeholder="Enter email"
                         disabled={emailLoading}
-                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm disabled:bg-gray-50 disabled:cursor-not-allowed transition-all duration-200 placeholder-gray-400"
+                        className="w-full px-2.5 py-1.5 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-xs disabled:bg-gray-50 disabled:cursor-not-allowed transition-all duration-200 placeholder-gray-400"
                       />
                       {unsubscribeEmail && !emailLoading && (
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                          {isValidEmail(unsubscribeEmail) ? (
+                            <CheckCircle className="w-3 h-3 text-green-500" />
+                          ) : (
+                            <X className="w-3 h-3 text-red-500" />
+                          )}
                         </div>
                       )}
                     </div>
                     <button
                       type="submit"
-                      disabled={emailLoading || !unsubscribeEmail}
-                      className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white py-2.5 px-4 rounded-lg hover:from-orange-700 hover:to-red-700 transition-all duration-200 text-sm font-medium disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md transform hover:scale-[1.02] disabled:transform-none"
+                      disabled={
+                        emailLoading ||
+                        !unsubscribeEmail ||
+                        !isValidEmail(unsubscribeEmail)
+                      }
+                      className="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white py-1.5 px-3 rounded-md hover:from-orange-700 hover:to-red-700 transition-all duration-200 text-xs font-medium disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transform hover:scale-[1.02] disabled:transform-none"
                     >
                       {emailLoading ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-3 h-3 animate-spin" />
                           Unsubscribing...
                         </>
                       ) : (
                         <>
-                          <UserX className="w-4 h-4" />
+                          <UserX className="w-3 h-3" />
                           Unsubscribe
                         </>
                       )}
@@ -234,39 +247,63 @@ const Sidebar = ({
               </button>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 relative">
+              {/* Sliding background indicator */}
+              <div
+                className="absolute left-0 w-full h-10 bg-blue-100 rounded-lg shadow-sm transition-all duration-200 ease-out"
+                style={{
+                  transform: `translateY(${
+                    selectedMonth === "all"
+                      ? 0
+                      : (uniqueMonths.indexOf(selectedMonth) + 1) * 40
+                  }px)`,
+                  opacity:
+                    selectedMonth !== "all" || uniqueMonths.length > 0 ? 1 : 0,
+                }}
+              />
+
+              {/* Sliding checkmark indicator */}
+              <CheckCircle
+                className="absolute right-3 w-4 h-4 text-blue-600 transition-all duration-200 ease-out z-10"
+                style={{
+                  transform: `translateY(${
+                    selectedMonth === "all"
+                      ? 12 // Center of first button (py-2 = 8px top + 4px for centering)
+                      : (uniqueMonths.indexOf(selectedMonth) + 1) * 40 + 12
+                  }px)`,
+                  opacity:
+                    selectedMonth !== "all" || uniqueMonths.length > 0 ? 1 : 0,
+                }}
+              />
+
               <button
                 onClick={() => handleMonthSelect("all")}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center justify-between group ${
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-150 flex items-center justify-between group relative z-10 ${
                   selectedMonth === "all"
-                    ? "bg-blue-100 text-blue-700 font-medium shadow-sm"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
+                    ? "text-blue-700 font-medium"
+                    : "text-gray-600 hover:text-gray-800"
                 }`}
                 onMouseEnter={() => setActiveFilter("all")}
                 onMouseLeave={() => setActiveFilter(null)}
               >
                 <span>All Months</span>
-                {selectedMonth === "all" && (
-                  <CheckCircle className="w-4 h-4 text-blue-600" />
-                )}
+                <div className="w-4 h-4" /> {/* Spacer to maintain layout */}
               </button>
 
-              {uniqueMonths.map((month) => (
+              {uniqueMonths.map((month, index) => (
                 <button
                   key={month}
                   onClick={() => handleMonthSelect(month)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center justify-between group ${
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-150 flex items-center justify-between group relative z-10 ${
                     selectedMonth === month
-                      ? "bg-blue-100 text-blue-700 font-medium shadow-sm"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
+                      ? "text-blue-700 font-medium"
+                      : "text-gray-600 hover:text-gray-800"
                   }`}
                   onMouseEnter={() => setActiveFilter(month)}
                   onMouseLeave={() => setActiveFilter(null)}
                 >
                   <span>{month}</span>
-                  {selectedMonth === month && (
-                    <CheckCircle className="w-4 h-4 text-blue-600" />
-                  )}
+                  <div className="w-4 h-4" /> {/* Spacer to maintain layout */}
                 </button>
               ))}
             </div>
@@ -276,7 +313,7 @@ const Sidebar = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-gradient-to-br from-green-400 to-blue-500"></div>
+                <div className="w-4 h-4 rounded bg-gradient-to-br from-blue-400 to-blue-600"></div>
                 Filter by Tags
               </h3>
               {selectedTags.length > 0 && (
@@ -342,13 +379,13 @@ const Sidebar = ({
               {releaseNotes.length}
             </div>
             <div className="text-xs text-gray-500">Total Releases</div>
-            <div className="w-8 h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto mt-2"></div>
+            <div className="w-8 h-1 bg-gradient-to-r from-blue-500 to-blue-700 rounded-full mx-auto mt-2"></div>
           </div>
 
           {isAdmin && (
             <button
               onClick={() => setShowAdminPanel(true)}
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-4 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 shadow-sm hover:shadow-md transform hover:scale-[1.02]"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-sm font-medium flex items-center justify-center gap-2 shadow-sm hover:shadow-md transform hover:scale-[1.02]"
             >
               <Settings className="w-4 h-4" />
               Admin Panel
