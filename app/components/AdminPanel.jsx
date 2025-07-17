@@ -357,7 +357,7 @@ const AdminPanel = ({
               Manage Releases ({releaseNotes.length})
             </h2>
 
-            <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div className="space-y-4 max-h-[calc(100vh-350px)] overflow-y-auto pb-4">
               {releaseNotes.map((note) => (
                 <div
                   key={note.id}
