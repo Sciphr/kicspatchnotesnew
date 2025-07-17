@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
-import { Calendar } from "lucide-react";
+import { Calendar, Menu } from "lucide-react";
 import ReleaseNoteCard from "./ReleaseNoteCard";
 
 const getMonthYear = (dateString) => {
@@ -20,6 +20,7 @@ const MainContent = ({
   isAdmin,
   deleteNote,
   monthRefs,
+  setIsMobileSidebarOpen,
 }) => {
   const contentRef = useRef(null);
 
@@ -85,7 +86,7 @@ const MainContent = ({
           </div>
 
           {/* Release Notes */}
-          <div className="space-y-8">
+          <div className="space-y-6 lg:space-y-8">
             {selectedMonth === "all" && selectedTags.length === 0
               ? // Show all notes grouped by month
                 Object.entries(notesByMonth)
@@ -99,7 +100,7 @@ const MainContent = ({
                         <Calendar className="w-5 h-5 text-gray-500" />
                         {month}
                       </h3>
-                      <div className="space-y-6 ml-7">
+                      <div className="space-y-4 lg:space-y-6 ml-4 lg:ml-7">
                         {notes.map((note) => (
                           <ReleaseNoteCard
                             key={note.id}
@@ -124,7 +125,7 @@ const MainContent = ({
                         <Calendar className="w-5 h-5 text-gray-500" />
                         {month}
                       </h3>
-                      <div className="space-y-6 ml-7">
+                      <div className="space-y-4 lg:space-y-6 ml-4 lg:ml-7">
                         {notes.map((note) => (
                           <ReleaseNoteCard
                             key={note.id}

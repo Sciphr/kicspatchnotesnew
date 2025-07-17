@@ -8,9 +8,9 @@ import {
   Filter,
   Settings,
   UserX,
-  X,
   AlertCircle,
   Loader2,
+  X,
 } from "lucide-react";
 
 const Sidebar = ({
@@ -39,9 +39,12 @@ const Sidebar = ({
   releaseNotes,
   isAdmin,
   setShowAdminPanel,
+  isMobileSidebarOpen,
+  setIsMobileSidebarOpen,
 }) => {
   const [activeFilter, setActiveFilter] = useState(null);
 
+  // Email validation function
   const isValidEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -59,9 +62,28 @@ const Sidebar = ({
   };
 
   return (
-    <div className="w-96 bg-white shadow-xl flex flex-col h-screen fixed left-0 top-0 z-10 border-r border-gray-100">
-      <div className=" border-b border-gray-200 flex-shrink-0">
+    <div
+      className={`
+      w-96 bg-white shadow-xl flex flex-col h-screen z-50 border-r border-gray-100
+      fixed left-0 top-0 
+      lg:translate-x-0 
+      ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+      transition-transform duration-300 ease-in-out
+    `}
+    >
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 flex-shrink-0">
         <div className="p-6">
+          {/* Mobile close button */}
+          <div className="lg:hidden absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="p-2 text-gray-500 hover:text-gray-700 rounded-md hover:bg-gray-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
               <Bell className="w-5 h-5 text-white" />

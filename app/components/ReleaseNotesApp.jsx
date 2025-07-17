@@ -7,6 +7,9 @@ import AdminPanel from "./AdminPanel";
 import { getUniqueMonths, getMonthYear, isAdminIP } from "../utils/helpers";
 
 const ReleaseNotesApp = () => {
+  // Mobile sidebar state
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   // Email subscription states
   const [email, setEmail] = useState("");
   const [unsubscribeEmail, setUnsubscribeEmail] = useState("");
@@ -104,6 +107,18 @@ const ReleaseNotesApp = () => {
     };
 
     initializeApp();
+  }, []);
+
+  // Close mobile sidebar when clicking outside or on mobile navigation
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   // Computed values
@@ -238,6 +253,8 @@ const ReleaseNotesApp = () => {
   const handleMonthSelect = (month) => {
     setSelectedMonth(month);
     setShowFilters(false);
+    // Close mobile sidebar when filter is selected
+    setIsMobileSidebarOpen(false);
   };
 
   const handleTagToggle = (tag) => {
@@ -383,8 +400,6 @@ const ReleaseNotesApp = () => {
         setEditingNote(null);
         setEditingData(null);
         setEditingTagsInput("");
-        // Refresh from database to ensure consistency
-        await fetchReleaseNotes();
       } else {
         // Handle specific API errors
         const errorMessage = data.error || "Failed to update release note";
@@ -534,10 +549,20 @@ const ReleaseNotesApp = () => {
         releaseNotes={releaseNotes}
         isAdmin={isAdmin}
         setShowAdminPanel={setShowAdminPanel}
+        isMobileSidebarOpen={isMobileSidebarOpen}
+        setIsMobileSidebarOpen={setIsMobileSidebarOpen}
       />
 
-      {/* Vertical Divider - Fixed */}
-      <div className="fixed left-96 top-0 w-px h-screen bg-gradient-to-b from-gray-200 via-gray-300 to-gray-200 z-10"></div>
+      {/* Mobile backdrop */}
+      {isMobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Vertical Divider - Only on desktop */}
+      <div className="hidden lg:block fixed left-96 top-0 w-px h-screen bg-gradient-to-b from-gray-200 via-gray-300 to-gray-200 z-10"></div>
 
       <MainContent
         selectedMonth={selectedMonth}
@@ -547,6 +572,7 @@ const ReleaseNotesApp = () => {
         isAdmin={isAdmin}
         deleteNote={deleteNote}
         monthRefs={monthRefs}
+        setIsMobileSidebarOpen={setIsMobileSidebarOpen}
       />
     </div>
   );
