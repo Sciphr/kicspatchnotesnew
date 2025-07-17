@@ -44,38 +44,38 @@ const ReleaseNoteCard = ({ note, isAdmin, onDelete }) => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
       {/* Content */}
-      <div className="p-6">
+      <div className="p-4 lg:p-6">
         {/* Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-4 space-y-2 lg:space-y-0">
+          <div className="flex items-center gap-2 lg:gap-3">
             <span
-              className={`px-3 py-1 text-xs font-medium rounded-full border ${getVersionBadgeColor(
+              className={`px-2 lg:px-3 py-1 text-xs font-medium rounded-full border ${getVersionBadgeColor(
                 note.type
               )}`}
             >
               v{note.version}
             </span>
-            <span className="text-sm text-gray-500">
+            <span className="text-xs lg:text-sm text-gray-500">
               {formatDate(note.date)}
             </span>
           </div>
           {isAdmin && (
             <button
               onClick={() => onDelete(note.id)}
-              className="text-red-500 hover:text-red-700 p-1"
+              className="text-red-500 hover:text-red-700 p-1 self-end lg:self-auto"
             >
               <Trash2 className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        <h4 className="text-lg font-semibold text-gray-900 mb-2">
+        <h4 className="text-base lg:text-lg font-semibold text-gray-900 mb-2">
           {note.title}
         </h4>
 
         {/* Tags */}
         {note.tags && note.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-3">
+          <div className="flex flex-wrap gap-1 lg:gap-2 mb-3">
             {note.tags.map((tag, index) => (
               <span
                 key={index}
@@ -87,14 +87,19 @@ const ReleaseNoteCard = ({ note, isAdmin, onDelete }) => {
           </div>
         )}
 
-        <p className="text-gray-600 mb-4">{note.description}</p>
+        <p className="text-sm lg:text-base text-gray-600 mb-4">
+          {note.description}
+        </p>
 
         <div className="space-y-2">
           <h5 className="text-sm font-medium text-gray-900 mb-3">
             What's Changed:
           </h5>
           {note.changes.map((change, index) => (
-            <div key={index} className="flex items-start gap-3 text-sm">
+            <div
+              key={index}
+              className="flex items-start gap-2 lg:gap-3 text-xs lg:text-sm"
+            >
               {getChangeIcon(change.type)}
               <span className="text-gray-700 leading-relaxed">
                 {change.text}
