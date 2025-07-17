@@ -1,5 +1,14 @@
-import React from "react";
-import { Settings, X, Plus, Edit, Save, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import {
+  Settings,
+  X,
+  Plus,
+  Edit,
+  Save,
+  Trash2,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 
 const getVersionBadgeColor = (type) => {
   switch (type) {
@@ -25,8 +34,13 @@ const formatDate = (dateString) => {
 
 const AdminPanel = ({
   releaseNotes,
+  getNextVersionSuggestion,
   newNote,
   setNewNote,
+  newNoteTagsInput,
+  setNewNoteTagsInput,
+  editingTagsInput,
+  setEditingTagsInput,
   addNewNote,
   deleteNote,
   addChangeToNewNote,
@@ -43,6 +57,47 @@ const AdminPanel = ({
   removeChangeFromEditing,
   onClose,
 }) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleAddNewNote = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await addNewNote();
+    } catch (err) {
+      setError("Failed to create release note. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteNote = async (id) => {
+    if (window.confirm("Are you sure you want to delete this release note?")) {
+      setLoading(true);
+      setError("");
+      try {
+        await deleteNote(id);
+      } catch (err) {
+        setError("Failed to delete release note. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await saveEdit();
+    } catch (err) {
+      setError("Failed to update release note. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -66,6 +121,20 @@ const AdminPanel = ({
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-md">
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-sm">{error}</span>
+            <button
+              onClick={() => setError("")}
+              className="ml-auto text-red-500 hover:text-red-700"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Add New Release */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -86,8 +155,11 @@ const AdminPanel = ({
                     onChange={(e) =>
                       setNewNote({ ...newNote, version: e.target.value })
                     }
-                    placeholder="e.g., 2.4.1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    placeholder={`e.g., ${getNextVersionSuggestion(
+                      releaseNotes
+                    )}`}
+                    disabled={loading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
                   />
                 </div>
                 <div>
@@ -100,7 +172,8 @@ const AdminPanel = ({
                     onChange={(e) =>
                       setNewNote({ ...newNote, date: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    disabled={loading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
                   />
                 </div>
               </div>
@@ -114,7 +187,8 @@ const AdminPanel = ({
                   onChange={(e) =>
                     setNewNote({ ...newNote, type: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  disabled={loading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
                 >
                   <option value="patch">Patch</option>
                   <option value="minor">Minor</option>
@@ -133,7 +207,8 @@ const AdminPanel = ({
                     setNewNote({ ...newNote, title: e.target.value })
                   }
                   placeholder="e.g., Bug Fixes and Performance Improvements"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  disabled={loading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
                 />
               </div>
 
@@ -148,7 +223,8 @@ const AdminPanel = ({
                   }
                   placeholder="Brief description of this release..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  disabled={loading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
                 />
               </div>
 
@@ -159,22 +235,32 @@ const AdminPanel = ({
                 </label>
                 <input
                   type="text"
-                  value={newNote.tags.join(", ")}
+                  value={newNoteTagsInput}
                   onChange={(e) => {
+                    setNewNoteTagsInput(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    // Process the tags when user finishes typing
                     const tags = e.target.value
                       .split(",")
-                      .map((tag) =>
-                        tag.trim().toLowerCase().replace(/\s+/g, "-")
-                      )
-                      .filter((tag) => tag);
+                      .map((tag) => tag.trim())
+                      .filter((tag) => tag !== "")
+                      .map((tag) => tag.toLowerCase().replace(/\s+/g, "-"));
                     setNewNote({ ...newNote, tags });
                   }}
+                  onFocus={() => {
+                    // When focusing, show the current tags as comma-separated
+                    if (newNoteTagsInput === "") {
+                      setNewNoteTagsInput(newNote.tags.join(", "));
+                    }
+                  }}
                   placeholder="e.g., bug-fixes, performance, mobile (comma-separated)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  disabled={loading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:bg-gray-100"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Enter tags separated by commas. Spaces will be converted to
-                  hyphens.
+                  hyphens when you finish typing.
                 </p>
                 {newNote.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
@@ -198,7 +284,8 @@ const AdminPanel = ({
                   </label>
                   <button
                     onClick={addChangeToNewNote}
-                    className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+                    disabled={loading}
+                    className="text-purple-600 hover:text-purple-700 text-sm font-medium disabled:text-gray-400"
                   >
                     + Add Change
                   </button>
@@ -211,7 +298,8 @@ const AdminPanel = ({
                         onChange={(e) =>
                           updateNewNoteChange(index, "type", e.target.value)
                         }
-                        className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        disabled={loading}
+                        className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                       >
                         <option value="feature">Feature</option>
                         <option value="improvement">Improvement</option>
@@ -225,12 +313,14 @@ const AdminPanel = ({
                           updateNewNoteChange(index, "text", e.target.value)
                         }
                         placeholder="Describe the change..."
-                        className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        disabled={loading}
+                        className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                       />
                       {newNote.changes.length > 1 && (
                         <button
                           onClick={() => removeChangeFromNewNote(index)}
-                          className="text-red-500 hover:text-red-700 px-2"
+                          disabled={loading}
+                          className="text-red-500 hover:text-red-700 px-2 disabled:text-gray-400"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -241,12 +331,21 @@ const AdminPanel = ({
               </div>
 
               <button
-                onClick={addNewNote}
-                disabled={!newNote.version || !newNote.title}
+                onClick={handleAddNewNote}
+                disabled={!newNote.version || !newNote.title || loading}
                 className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center gap-2"
               >
-                <Save className="w-4 h-4" />
-                Add Release Note
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Add Release Note
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -281,7 +380,8 @@ const AdminPanel = ({
                                 version: e.target.value,
                               })
                             }
-                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            disabled={loading}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                           />
                         </div>
                         <div>
@@ -297,7 +397,8 @@ const AdminPanel = ({
                                 date: e.target.value,
                               })
                             }
-                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            disabled={loading}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                           />
                         </div>
                       </div>
@@ -314,7 +415,8 @@ const AdminPanel = ({
                               type: e.target.value,
                             })
                           }
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          disabled={loading}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                         >
                           <option value="patch">Patch</option>
                           <option value="minor">Minor</option>
@@ -335,7 +437,8 @@ const AdminPanel = ({
                               title: e.target.value,
                             })
                           }
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          disabled={loading}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                         />
                       </div>
 
@@ -352,7 +455,8 @@ const AdminPanel = ({
                             })
                           }
                           rows={2}
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          disabled={loading}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                         />
                       </div>
 
@@ -363,23 +467,34 @@ const AdminPanel = ({
                         </label>
                         <input
                           type="text"
-                          value={
-                            editingData.tags ? editingData.tags.join(", ") : ""
-                          }
+                          value={editingTagsInput}
                           onChange={(e) => {
+                            setEditingTagsInput(e.target.value);
+                          }}
+                          onBlur={(e) => {
+                            // Process the tags when user finishes typing
                             const tags = e.target.value
                               .split(",")
+                              .map((tag) => tag.trim())
+                              .filter((tag) => tag !== "")
                               .map((tag) =>
-                                tag.trim().toLowerCase().replace(/\s+/g, "-")
-                              )
-                              .filter((tag) => tag);
-                            setEditingData({
-                              ...editingData,
-                              tags,
-                            });
+                                tag.toLowerCase().replace(/\s+/g, "-")
+                              );
+                            setEditingData({ ...editingData, tags });
+                          }}
+                          onFocus={() => {
+                            // When focusing, show the current tags as comma-separated
+                            if (editingTagsInput === "") {
+                              setEditingTagsInput(
+                                editingData.tags
+                                  ? editingData.tags.join(", ")
+                                  : ""
+                              );
+                            }
                           }}
                           placeholder="e.g., bug-fixes, performance, mobile"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          disabled={loading}
+                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                         />
                         {editingData.tags && editingData.tags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -402,7 +517,8 @@ const AdminPanel = ({
                           </label>
                           <button
                             onClick={addChangeToEditing}
-                            className="text-purple-600 hover:text-purple-700 text-xs font-medium"
+                            disabled={loading}
+                            className="text-purple-600 hover:text-purple-700 text-xs font-medium disabled:text-gray-400"
                           >
                             + Add
                           </button>
@@ -419,7 +535,8 @@ const AdminPanel = ({
                                     e.target.value
                                   )
                                 }
-                                className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                disabled={loading}
+                                className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                               >
                                 <option value="feature">Feature</option>
                                 <option value="improvement">Improvement</option>
@@ -436,12 +553,14 @@ const AdminPanel = ({
                                     e.target.value
                                   )
                                 }
-                                className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                disabled={loading}
+                                className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:bg-gray-100"
                               />
                               {editingData.changes.length > 1 && (
                                 <button
                                   onClick={() => removeChangeFromEditing(index)}
-                                  className="text-red-500 hover:text-red-700 px-1"
+                                  disabled={loading}
+                                  className="text-red-500 hover:text-red-700 px-1 disabled:text-gray-400"
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -453,16 +572,30 @@ const AdminPanel = ({
 
                       <div className="flex gap-2 pt-2">
                         <button
-                          onClick={saveEdit}
-                          disabled={!editingData.version || !editingData.title}
+                          onClick={handleSaveEdit}
+                          disabled={
+                            !editingData.version ||
+                            !editingData.title ||
+                            loading
+                          }
                           className="flex-1 bg-green-600 text-white py-1 px-3 rounded text-sm hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-1"
                         >
-                          <Save className="w-3 h-3" />
-                          Save
+                          {loading ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-3 h-3" />
+                              Save
+                            </>
+                          )}
                         </button>
                         <button
                           onClick={cancelEditing}
-                          className="flex-1 bg-gray-500 text-white py-1 px-3 rounded text-sm hover:bg-gray-600 transition-colors font-medium"
+                          disabled={loading}
+                          className="flex-1 bg-gray-500 text-white py-1 px-3 rounded text-sm hover:bg-gray-600 disabled:bg-gray-300 transition-colors font-medium"
                         >
                           Cancel
                         </button>
@@ -498,15 +631,21 @@ const AdminPanel = ({
                       <div className="flex gap-2 ml-3">
                         <button
                           onClick={() => startEditing(note)}
-                          className="text-blue-500 hover:text-blue-700"
+                          disabled={loading}
+                          className="text-blue-500 hover:text-blue-700 disabled:text-gray-400"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => deleteNote(note.id)}
-                          className="text-red-500 hover:text-red-700"
+                          onClick={() => handleDeleteNote(note.id)}
+                          disabled={loading}
+                          className="text-red-500 hover:text-red-700 disabled:text-gray-400"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {loading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                     </div>

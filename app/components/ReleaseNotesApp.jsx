@@ -41,8 +41,25 @@ const ReleaseNotesApp = () => {
     changes: [{ type: "feature", text: "" }],
   });
 
+  // Add these new state variables for raw tag input
+  const [newNoteTagsInput, setNewNoteTagsInput] = useState("");
+  const [editingTagsInput, setEditingTagsInput] = useState("");
+
   // Refs
   const monthRefs = useRef({});
+
+  // Helper function to get the next version number
+  const getNextVersionSuggestion = (releaseNotes) => {
+    if (releaseNotes.length === 0) return "1.0.0";
+
+    const latestVersion = releaseNotes[0]?.version || "1.0.0";
+    const parts = latestVersion.split(".").map(Number);
+
+    // Increment patch version by default
+    parts[2] = (parts[2] || 0) + 1;
+
+    return parts.join(".");
+  };
 
   // Fetch release notes from database
   const fetchReleaseNotes = async () => {
@@ -200,46 +217,84 @@ const ReleaseNotesApp = () => {
     setSelectedTags([]);
   };
 
-  // Admin handlers
   const addNewNote = async () => {
-    if (newNote.version && newNote.title) {
-      // Instead of adding to state, we'll need to call the API
-      // For now, let's add to state and refresh from database
-      const noteWithId = {
-        ...newNote,
-        id: Date.now().toString(),
-        changes: newNote.changes.filter((change) => change.text.trim() !== ""),
-      };
-      setReleaseNotes([noteWithId, ...releaseNotes]);
-      setNewNote({
-        version: "",
-        date: new Date().toISOString().split("T")[0],
-        type: "patch",
-        title: "",
-        description: "",
-        tags: [],
-        changes: [{ type: "feature", text: "" }],
+    if (!newNote.version || !newNote.title) return;
+
+    try {
+      const response = await fetch("/api/release-notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          version: newNote.version,
+          title: newNote.title,
+          description: newNote.description,
+          type: newNote.type,
+          tags: newNote.tags,
+          changes: newNote.changes.filter(
+            (change) => change.text.trim() !== ""
+          ),
+        }),
       });
 
-      // TODO: Later we'll replace this with API call and refresh
-      // For now, refresh from database after a brief delay
-      setTimeout(() => {
-        fetchReleaseNotes();
-      }, 100);
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("Release note created:", data);
+        // Reset form
+        setNewNote({
+          version: "",
+          date: new Date().toISOString().split("T")[0],
+          type: "patch",
+          title: "",
+          description: "",
+          tags: [],
+          changes: [{ type: "feature", text: "" }],
+        });
+        setNewNoteTagsInput(""); // Clear the raw input too
+        // Refresh the data
+        await fetchReleaseNotes();
+      } else {
+        console.error("Error creating release note:", data.error);
+        // You could add error state handling here
+      }
+    } catch (error) {
+      console.error("Network error creating release note:", error);
+      // You could add error state handling here
     }
   };
 
   const deleteNote = async (id) => {
-    // Remove from state immediately for better UX
-    setReleaseNotes(releaseNotes.filter((note) => note.id !== id));
+    try {
+      // Remove from state immediately for better UX
+      setReleaseNotes(releaseNotes.filter((note) => note.id !== id));
 
-    // TODO: Later we'll add API call to delete from database
-    // For now, the note will come back on next refresh since we're not actually deleting from DB
+      const response = await fetch(`/api/release-notes?id=${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("Release note deleted:", data);
+        // Data is already removed from state, so we're good
+      } else {
+        console.error("Error deleting release note:", data.error);
+        // If deletion failed, refresh to restore the data
+        await fetchReleaseNotes();
+      }
+    } catch (error) {
+      console.error("Network error deleting release note:", error);
+      // If deletion failed, refresh to restore the data
+      await fetchReleaseNotes();
+    }
   };
 
   const startEditing = (note) => {
     setEditingNote(note.id);
     setEditingData({ ...note });
+    setEditingTagsInput(note.tags ? note.tags.join(", ") : "");
   };
 
   const cancelEditing = () => {
@@ -247,21 +302,55 @@ const ReleaseNotesApp = () => {
     setEditingData(null);
   };
 
-  const saveEdit = () => {
-    if (editingData && editingData.version && editingData.title) {
-      const updatedNotes = releaseNotes.map((note) =>
-        note.id === editingNote
-          ? {
-              ...editingData,
-              changes: editingData.changes.filter(
-                (change) => change.text.trim() !== ""
-              ),
-            }
-          : note
-      );
-      setReleaseNotes(updatedNotes);
-      setEditingNote(null);
-      setEditingData(null);
+  const saveEdit = async () => {
+    if (!editingData || !editingData.version || !editingData.title) return;
+
+    try {
+      const response = await fetch("/api/release-notes", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: editingData.id,
+          version: editingData.version,
+          title: editingData.title,
+          description: editingData.description,
+          type: editingData.type,
+          tags: editingData.tags,
+          changes: editingData.changes.filter(
+            (change) => change.text.trim() !== ""
+          ),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("Release note updated:", data);
+        // Update local state
+        const updatedNotes = releaseNotes.map((note) =>
+          note.id === editingNote
+            ? {
+                ...editingData,
+                changes: editingData.changes.filter(
+                  (change) => change.text.trim() !== ""
+                ),
+              }
+            : note
+        );
+        setReleaseNotes(updatedNotes);
+        setEditingNote(null);
+        setEditingData(null);
+        // Refresh from database to ensure consistency
+        await fetchReleaseNotes();
+      } else {
+        console.error("Error updating release note:", data.error);
+        // You could add error state handling here
+      }
+    } catch (error) {
+      console.error("Network error updating release note:", error);
+      // You could add error state handling here
     }
   };
 
@@ -344,8 +433,13 @@ const ReleaseNotesApp = () => {
     return (
       <AdminPanel
         releaseNotes={releaseNotes}
+        getNextVersionSuggestion={getNextVersionSuggestion}
         newNote={newNote}
         setNewNote={setNewNote}
+        newNoteTagsInput={newNoteTagsInput}
+        setNewNoteTagsInput={setNewNoteTagsInput}
+        editingTagsInput={editingTagsInput}
+        setEditingTagsInput={setEditingTagsInput}
         addNewNote={addNewNote}
         deleteNote={deleteNote}
         addChangeToNewNote={addChangeToNewNote}

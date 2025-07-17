@@ -116,48 +116,6 @@ const MainContent = ({
             )}
           </div>
 
-          {/* Release Notes */}
-          <div className="space-y-8">
-            {selectedMonth === "all" ? (
-              // Show all notes grouped by month
-              Object.entries(notesByMonth)
-                .sort(([a], [b]) => new Date(b) - new Date(a))
-                .map(([month, notes]) => (
-                  <div key={month}>
-                    <h3
-                      ref={(el) => (monthRefs.current[month] = el)}
-                      className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2"
-                    >
-                      <Calendar className="w-5 h-5 text-gray-500" />
-                      {month}
-                    </h3>
-                    <div className="space-y-6 ml-7">
-                      {notes.map((note) => (
-                        <ReleaseNoteCard
-                          key={note.id}
-                          note={note}
-                          isAdmin={isAdmin}
-                          onDelete={deleteNote}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))
-            ) : (
-              // Show filtered notes
-              <div className="space-y-6">
-                {filteredNotes.map((note) => (
-                  <ReleaseNoteCard
-                    key={note.id}
-                    note={note}
-                    isAdmin={isAdmin}
-                    onDelete={deleteNote}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* Footer */}
           <div className="mt-16 pt-8 border-t border-gray-200 text-center text-gray-500">
             <p className="text-sm">
