@@ -66,6 +66,8 @@ const AdminPanel = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("releases");
+  const [emailHistory, setEmailHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Email sending states
   const [emailSending, setEmailSending] = useState(false);
@@ -83,6 +85,23 @@ const AdminPanel = ({
       setError("Failed to create release note. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmailHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const response = await fetch("/api/email-history");
+      const data = await response.json();
+      if (response.ok) {
+        setEmailHistory(data.history || []);
+      } else {
+        console.error("Failed to fetch email history:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching email history:", error);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -272,7 +291,20 @@ const AdminPanel = ({
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
-                📧 Email Notifications
+                📧 Send Emails
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab("history");
+                  fetchEmailHistory();
+                }}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "history"
+                    ? "border-purple-500 text-purple-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                📊 Email History
               </button>
             </nav>
           </div>
@@ -777,7 +809,7 @@ const AdminPanel = ({
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === "emails" ? (
           // Email Notifications Tab
           <div className="max-w-7xl mx-auto">
             <div className="bg-white rounded-lg border border-gray-200 p-8">
@@ -950,6 +982,77 @@ const AdminPanel = ({
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        ) : (
+          // Email History Tab
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-lg border border-gray-200 p-8">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-8 flex items-center gap-3">
+                📊 Email History
+                <button
+                  onClick={fetchEmailHistory}
+                  disabled={historyLoading}
+                  className="ml-auto text-sm bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 disabled:bg-gray-400"
+                >
+                  {historyLoading ? "Refreshing..." : "Refresh"}
+                </button>
+              </h2>
+
+              {historyLoading ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-600" />
+                  <p className="text-gray-600">Loading email history...</p>
+                </div>
+              ) : emailHistory.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No email notifications sent yet</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {emailHistory.map((record) => (
+                    <div
+                      key={record.id}
+                      className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="font-medium text-gray-900">
+                              v{record.version} - {record.title}
+                            </span>
+                            <span
+                              className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                record.status === "sent"
+                                  ? "bg-green-100 text-green-800"
+                                  : record.status === "failed"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-yellow-100 text-yellow-800"
+                              }`}
+                            >
+                              {record.status}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-600 space-y-1">
+                            <div>
+                              📧 Sent to {record.email_count} subscribers
+                            </div>
+                            <div>
+                              📅 {new Date(record.sent_at).toLocaleString()}
+                            </div>
+                            {record.error_message && (
+                              <div className="text-red-600">
+                                ❌ {record.error_message}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
