@@ -61,23 +61,33 @@ const ReleaseNotesApp = () => {
     return parts.join(".");
   };
 
-  // Fetch release notes from database
   const fetchReleaseNotes = async () => {
     try {
       setLoading(true);
       setError(null);
 
       const response = await fetch("/api/release-notes");
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const errorMessage =
+          data.error ||
+          `HTTP ${response.status}: Failed to fetch release notes`;
+        throw new Error(errorMessage);
+      }
+
       const result = await response.json();
 
-      if (response.ok) {
+      if (result.data && Array.isArray(result.data)) {
         setReleaseNotes(result.data);
       } else {
-        setError(result.error || "Failed to fetch release notes");
+        throw new Error(
+          "Invalid response format: expected array of release notes"
+        );
       }
     } catch (error) {
       console.error("Error fetching release notes:", error);
-      setError("Network error. Please try again.");
+      setError(error.message || "Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -111,7 +121,6 @@ const ReleaseNotesApp = () => {
     return monthMatch && tagMatch;
   });
 
-  // Email handlers with API calls
   const handleSubscribe = async (e) => {
     e.preventDefault();
     if (!email || !email.includes("@")) {
@@ -138,16 +147,29 @@ const ReleaseNotesApp = () => {
         setEmail("");
         setTimeout(() => setIsSubscribed(false), 3000);
       } else {
-        // Handle specific error cases
-        if (response.status === 409) {
-          setEmailError("This email is already subscribed");
-        } else {
-          setEmailError(data.error || "Failed to subscribe. Please try again.");
+        // Handle specific error cases with better messages
+        let errorMessage;
+        switch (response.status) {
+          case 409:
+            errorMessage = "This email is already subscribed";
+            break;
+          case 400:
+            errorMessage = data.error || "Invalid email address";
+            break;
+          case 500:
+            errorMessage = "Server error. Please try again later.";
+            break;
+          default:
+            errorMessage =
+              data.error || "Failed to subscribe. Please try again.";
         }
+        setEmailError(errorMessage);
       }
     } catch (error) {
       console.error("Subscribe error:", error);
-      setEmailError("Network error. Please try again.");
+      setEmailError(
+        "Network error. Please check your connection and try again."
+      );
     } finally {
       setEmailLoading(false);
     }
@@ -179,18 +201,29 @@ const ReleaseNotesApp = () => {
         setUnsubscribeEmail("");
         setTimeout(() => setIsUnsubscribed(false), 3000);
       } else {
-        // Handle specific error cases
-        if (response.status === 404) {
-          setEmailError("Email not found in our subscriber list");
-        } else {
-          setEmailError(
-            data.error || "Failed to unsubscribe. Please try again."
-          );
+        // Handle specific error cases with better messages
+        let errorMessage;
+        switch (response.status) {
+          case 404:
+            errorMessage = "Email not found in our subscriber list";
+            break;
+          case 400:
+            errorMessage = data.error || "Invalid email address";
+            break;
+          case 500:
+            errorMessage = "Server error. Please try again later.";
+            break;
+          default:
+            errorMessage =
+              data.error || "Failed to unsubscribe. Please try again.";
         }
+        setEmailError(errorMessage);
       }
     } catch (error) {
       console.error("Unsubscribe error:", error);
-      setEmailError("Network error. Please try again.");
+      setEmailError(
+        "Network error. Please check your connection and try again."
+      );
     } finally {
       setEmailLoading(false);
     }
@@ -252,20 +285,24 @@ const ReleaseNotesApp = () => {
           tags: [],
           changes: [{ type: "feature", text: "" }],
         });
-        setNewNoteTagsInput(""); // Clear the raw input too
-        // Refresh the data
+        setNewNoteTagsInput("");
         await fetchReleaseNotes();
       } else {
-        console.error("Error creating release note:", data.error);
-        // You could add error state handling here
+        // Handle specific API errors
+        const errorMessage = data.error || "Failed to create release note";
+        console.error("Error creating release note:", errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("Network error creating release note:", error);
-      // You could add error state handling here
+      // Re-throw so AdminPanel can handle it
+      throw error;
     }
   };
 
   const deleteNote = async (id) => {
+    const originalNotes = [...releaseNotes]; // Backup for rollback
+
     try {
       // Remove from state immediately for better UX
       setReleaseNotes(releaseNotes.filter((note) => note.id !== id));
@@ -274,20 +311,26 @@ const ReleaseNotesApp = () => {
         method: "DELETE",
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        const data = await response.json();
+        const errorMessage = data.error || "Failed to delete release note";
+        console.error("Error deleting release note:", errorMessage);
 
-      if (response.ok) {
-        console.log("Release note deleted:", data);
-        // Data is already removed from state, so we're good
-      } else {
-        console.error("Error deleting release note:", data.error);
-        // If deletion failed, refresh to restore the data
-        await fetchReleaseNotes();
+        // Rollback the optimistic update
+        setReleaseNotes(originalNotes);
+        throw new Error(errorMessage);
       }
+
+      const data = await response.json();
+      console.log("Release note deleted:", data);
     } catch (error) {
       console.error("Network error deleting release note:", error);
-      // If deletion failed, refresh to restore the data
-      await fetchReleaseNotes();
+
+      // Ensure rollback happened
+      setReleaseNotes(originalNotes);
+
+      // Re-throw so AdminPanel can handle it
+      throw error;
     }
   };
 
@@ -328,7 +371,7 @@ const ReleaseNotesApp = () => {
 
       if (response.ok) {
         console.log("Release note updated:", data);
-        // Update local state
+        // Update local state optimistically
         const updatedNotes = releaseNotes.map((note) =>
           note.id === editingNote
             ? {
@@ -342,15 +385,19 @@ const ReleaseNotesApp = () => {
         setReleaseNotes(updatedNotes);
         setEditingNote(null);
         setEditingData(null);
+        setEditingTagsInput("");
         // Refresh from database to ensure consistency
         await fetchReleaseNotes();
       } else {
-        console.error("Error updating release note:", data.error);
-        // You could add error state handling here
+        // Handle specific API errors
+        const errorMessage = data.error || "Failed to update release note";
+        console.error("Error updating release note:", errorMessage);
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("Network error updating release note:", error);
-      // You could add error state handling here
+      // Re-throw so AdminPanel can handle it
+      throw error;
     }
   };
 
