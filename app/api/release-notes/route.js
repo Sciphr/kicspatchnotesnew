@@ -39,16 +39,8 @@ export async function GET(request) {
         ORDER BY created_at DESC`
       );
 
-      console.log("Raw database rows:", rows.length);
-
       // Transform the data to match the frontend format
       const releaseNotes = rows.map((row, index) => {
-        console.log(`Processing row ${index + 1}:`, {
-          id: row.id,
-          version: row.version,
-          title: row.title,
-        });
-
         // Safely parse tags
         const tags = safeJSONParse(row.tags, []);
 
@@ -71,8 +63,6 @@ export async function GET(request) {
           updated_at: row.updated_at,
         };
       });
-
-      console.log("Processed release notes:", releaseNotes.length);
 
       return NextResponse.json(
         {
@@ -138,8 +128,6 @@ export async function POST(request) {
           JSON.stringify(cleanData.notes),
         ]
       );
-
-      console.log("Release note created with ID:", result.insertId);
 
       return NextResponse.json(
         {
@@ -229,8 +217,6 @@ export async function PUT(request) {
         );
       }
 
-      console.log("Release note updated, ID:", id);
-
       return NextResponse.json(
         {
           message: "Release note updated successfully.",
@@ -285,8 +271,6 @@ export async function DELETE(request) {
           { status: 404 }
         );
       }
-
-      console.log("Release note deleted, ID:", id);
 
       return NextResponse.json(
         {

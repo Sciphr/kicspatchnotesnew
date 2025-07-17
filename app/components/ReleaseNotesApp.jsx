@@ -274,7 +274,6 @@ const ReleaseNotesApp = () => {
       const data = await response.json();
 
       if (response.ok) {
-        console.log("Release note created:", data);
         // Reset form
         setNewNote({
           version: "",
@@ -322,7 +321,6 @@ const ReleaseNotesApp = () => {
       }
 
       const data = await response.json();
-      console.log("Release note deleted:", data);
     } catch (error) {
       console.error("Network error deleting release note:", error);
 
@@ -370,7 +368,6 @@ const ReleaseNotesApp = () => {
       const data = await response.json();
 
       if (response.ok) {
-        console.log("Release note updated:", data);
         // Update local state optimistically
         const updatedNotes = releaseNotes.map((note) =>
           note.id === editingNote
@@ -507,7 +504,10 @@ const ReleaseNotesApp = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div
+      className="min-h-screen bg-gray-50 flex"
+      suppressHydrationWarning={true}
+    >
       <Sidebar
         email={email}
         setEmail={setEmail}
