@@ -41,7 +41,7 @@ const MainContent = ({
   }, {});
 
   return (
-    <div className="flex-1 ml-96 overflow-hidden">
+    <div className="flex-1 lg:ml-96 overflow-hidden">
       <div ref={contentRef} className="h-screen overflow-y-auto px-8 py-8">
         <div className="max-w-4xl">
           {/* Header */}

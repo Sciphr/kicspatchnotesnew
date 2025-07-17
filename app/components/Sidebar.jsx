@@ -69,6 +69,7 @@ const Sidebar = ({
       lg:translate-x-0 
       ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
       transition-transform duration-300 ease-in-out
+
     `}
     >
       {/* Header */}
@@ -284,20 +285,6 @@ const Sidebar = ({
                 }}
               />
 
-              {/* Sliding checkmark indicator */}
-              <CheckCircle
-                className="absolute right-3 w-4 h-4 text-blue-600 transition-all duration-200 ease-out z-10"
-                style={{
-                  transform: `translateY(${
-                    selectedMonth === "all"
-                      ? 12 // Center of first button (py-2 = 8px top + 4px for centering)
-                      : (uniqueMonths.indexOf(selectedMonth) + 1) * 40 + 12
-                  }px)`,
-                  opacity:
-                    selectedMonth !== "all" || uniqueMonths.length > 0 ? 1 : 0,
-                }}
-              />
-
               <button
                 onClick={() => handleMonthSelect("all")}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-150 flex items-center justify-between group relative z-10 ${
@@ -309,10 +296,20 @@ const Sidebar = ({
                 onMouseLeave={() => setActiveFilter(null)}
               >
                 <span>All Months</span>
-                <div className="w-4 h-4" /> {/* Spacer to maintain layout */}
+                <div className="w-4 h-4 flex items-center justify-center">
+                  {selectedMonth === "all" && (
+                    <CheckCircle
+                      className={`w-4 h-4 text-blue-600 transition-all duration-200 ease-out ${
+                        selectedMonth === "all"
+                          ? "opacity-100 scale-100"
+                          : "opacity-0 scale-75"
+                      }`}
+                    />
+                  )}
+                </div>
               </button>
 
-              {uniqueMonths.map((month, index) => (
+              {uniqueMonths.map((month) => (
                 <button
                   key={month}
                   onClick={() => handleMonthSelect(month)}
@@ -325,7 +322,17 @@ const Sidebar = ({
                   onMouseLeave={() => setActiveFilter(null)}
                 >
                   <span>{month}</span>
-                  <div className="w-4 h-4" /> {/* Spacer to maintain layout */}
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    {selectedMonth === month && (
+                      <CheckCircle
+                        className={`w-4 h-4 text-blue-600 transition-all duration-200 ease-out ${
+                          selectedMonth === month
+                            ? "opacity-100 scale-100"
+                            : "opacity-0 scale-75"
+                        }`}
+                      />
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
