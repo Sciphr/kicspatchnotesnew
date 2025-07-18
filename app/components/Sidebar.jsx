@@ -360,18 +360,16 @@ const Sidebar = ({
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {selectedTags.map((tag) => (
-                    <span
+                    <button
                       key={tag}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white text-green-800 rounded-full border border-green-200 shadow-sm hover:shadow-md transition-shadow"
+                      onClick={() => handleTagToggle(tag)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-white text-green-800 rounded-full border border-green-200 shadow-sm hover:shadow-md transition-shadow hover:bg-green-50 cursor-pointer"
                     >
                       {tag.replace("-", " ")}
-                      <button
-                        onClick={() => handleTagToggle(tag)}
-                        className="hover:bg-green-100 rounded-full p-0.5 transition-colors"
-                      >
+                      <span className="hover:bg-green-100 rounded-full p-0.5 transition-colors">
                         ×
-                      </button>
-                    </span>
+                      </span>
+                    </button>
                   ))}
                 </div>
               </div>

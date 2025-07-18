@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import MainContent from "./MainContent";
-import AdminPanel from "./AdminPanel";
 import { getUniqueMonths, getMonthYear, isAdminIP } from "../utils/helpers";
 
 const ReleaseNotesApp = () => {
@@ -24,45 +23,16 @@ const ReleaseNotesApp = () => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Admin states
+  // Admin state (for showing/hiding admin button)
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   // Release notes states
   const [releaseNotes, setReleaseNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editingNote, setEditingNote] = useState(null);
-  const [editingData, setEditingData] = useState(null);
-  const [newNote, setNewNote] = useState({
-    version: "",
-    date: new Date().toISOString().split("T")[0],
-    type: "patch",
-    title: "",
-    description: "",
-    tags: [],
-    changes: [{ type: "feature", text: "" }],
-  });
-
-  // Add these new state variables for raw tag input
-  const [newNoteTagsInput, setNewNoteTagsInput] = useState("");
-  const [editingTagsInput, setEditingTagsInput] = useState("");
 
   // Refs
   const monthRefs = useRef({});
-
-  // Helper function to get the next version number
-  const getNextVersionSuggestion = (releaseNotes) => {
-    if (releaseNotes.length === 0) return "1.0.0";
-
-    const latestVersion = releaseNotes[0]?.version || "1.0.0";
-    const parts = latestVersion.split(".").map(Number);
-
-    // Increment patch version by default
-    parts[2] = (parts[2] || 0) + 1;
-
-    return parts.join(".");
-  };
 
   const fetchReleaseNotes = async () => {
     try {
@@ -267,194 +237,9 @@ const ReleaseNotesApp = () => {
     setSelectedTags([]);
   };
 
-  const addNewNote = async () => {
-    if (!newNote.version || !newNote.title) return;
-
-    try {
-      const response = await fetch("/api/release-notes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          version: newNote.version,
-          title: newNote.title,
-          description: newNote.description,
-          type: newNote.type,
-          tags: newNote.tags,
-          changes: newNote.changes.filter(
-            (change) => change.text.trim() !== ""
-          ),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Reset form
-        setNewNote({
-          version: "",
-          date: new Date().toISOString().split("T")[0],
-          type: "patch",
-          title: "",
-          description: "",
-          tags: [],
-          changes: [{ type: "feature", text: "" }],
-        });
-        setNewNoteTagsInput("");
-        await fetchReleaseNotes();
-      } else {
-        // Handle specific API errors
-        const errorMessage = data.error || "Failed to create release note";
-        console.error("Error creating release note:", errorMessage);
-        throw new Error(errorMessage);
-      }
-    } catch (error) {
-      console.error("Network error creating release note:", error);
-      // Re-throw so AdminPanel can handle it
-      throw error;
-    }
-  };
-
+  // Dummy delete function for non-admin users (shouldn't be called)
   const deleteNote = async (id) => {
-    const originalNotes = [...releaseNotes]; // Backup for rollback
-
-    try {
-      // Remove from state immediately for better UX
-      setReleaseNotes(releaseNotes.filter((note) => note.id !== id));
-
-      const response = await fetch(`/api/release-notes?id=${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        const errorMessage = data.error || "Failed to delete release note";
-        console.error("Error deleting release note:", errorMessage);
-
-        // Rollback the optimistic update
-        setReleaseNotes(originalNotes);
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-    } catch (error) {
-      console.error("Network error deleting release note:", error);
-
-      // Ensure rollback happened
-      setReleaseNotes(originalNotes);
-
-      // Re-throw so AdminPanel can handle it
-      throw error;
-    }
-  };
-
-  const startEditing = (note) => {
-    setEditingNote(note.id);
-    setEditingData({ ...note });
-    setEditingTagsInput(note.tags ? note.tags.join(", ") : "");
-  };
-
-  const cancelEditing = () => {
-    setEditingNote(null);
-    setEditingData(null);
-  };
-
-  const saveEdit = async () => {
-    if (!editingData || !editingData.version || !editingData.title) return;
-
-    try {
-      const response = await fetch("/api/release-notes", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: editingData.id,
-          version: editingData.version,
-          title: editingData.title,
-          description: editingData.description,
-          type: editingData.type,
-          tags: editingData.tags,
-          changes: editingData.changes.filter(
-            (change) => change.text.trim() !== ""
-          ),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Update local state optimistically
-        const updatedNotes = releaseNotes.map((note) =>
-          note.id === editingNote
-            ? {
-                ...editingData,
-                changes: editingData.changes.filter(
-                  (change) => change.text.trim() !== ""
-                ),
-              }
-            : note
-        );
-        setReleaseNotes(updatedNotes);
-        setEditingNote(null);
-        setEditingData(null);
-        setEditingTagsInput("");
-      } else {
-        // Handle specific API errors
-        const errorMessage = data.error || "Failed to update release note";
-        console.error("Error updating release note:", errorMessage);
-        throw new Error(errorMessage);
-      }
-    } catch (error) {
-      console.error("Network error updating release note:", error);
-      // Re-throw so AdminPanel can handle it
-      throw error;
-    }
-  };
-
-  // New note change handlers
-  const addChangeToNewNote = () => {
-    setNewNote({
-      ...newNote,
-      changes: [...newNote.changes, { type: "feature", text: "" }],
-    });
-  };
-
-  const updateNewNoteChange = (index, field, value) => {
-    const updatedChanges = newNote.changes.map((change, i) =>
-      i === index ? { ...change, [field]: value } : change
-    );
-    setNewNote({ ...newNote, changes: updatedChanges });
-  };
-
-  const removeChangeFromNewNote = (index) => {
-    if (newNote.changes.length > 1) {
-      const updatedChanges = newNote.changes.filter((_, i) => i !== index);
-      setNewNote({ ...newNote, changes: updatedChanges });
-    }
-  };
-
-  // Editing change handlers
-  const updateEditingChange = (index, field, value) => {
-    const updatedChanges = editingData.changes.map((change, i) =>
-      i === index ? { ...change, [field]: value } : change
-    );
-    setEditingData({ ...editingData, changes: updatedChanges });
-  };
-
-  const addChangeToEditing = () => {
-    setEditingData({
-      ...editingData,
-      changes: [...editingData.changes, { type: "feature", text: "" }],
-    });
-  };
-
-  const removeChangeFromEditing = (index) => {
-    if (editingData.changes.length > 1) {
-      const updatedChanges = editingData.changes.filter((_, i) => i !== index);
-      setEditingData({ ...editingData, changes: updatedChanges });
-    }
+    console.warn("Delete function called on main app - this shouldn't happen");
   };
 
   // Show loading state
@@ -487,37 +272,6 @@ const ReleaseNotesApp = () => {
     );
   }
 
-  // Render admin panel if shown
-  if (showAdminPanel) {
-    return (
-      <AdminPanel
-        releaseNotes={releaseNotes}
-        getNextVersionSuggestion={getNextVersionSuggestion}
-        newNote={newNote}
-        setNewNote={setNewNote}
-        newNoteTagsInput={newNoteTagsInput}
-        setNewNoteTagsInput={setNewNoteTagsInput}
-        editingTagsInput={editingTagsInput}
-        setEditingTagsInput={setEditingTagsInput}
-        addNewNote={addNewNote}
-        deleteNote={deleteNote}
-        addChangeToNewNote={addChangeToNewNote}
-        updateNewNoteChange={updateNewNoteChange}
-        removeChangeFromNewNote={removeChangeFromNewNote}
-        editingNote={editingNote}
-        editingData={editingData}
-        setEditingData={setEditingData}
-        startEditing={startEditing}
-        cancelEditing={cancelEditing}
-        saveEdit={saveEdit}
-        updateEditingChange={updateEditingChange}
-        addChangeToEditing={addChangeToEditing}
-        removeChangeFromEditing={removeChangeFromEditing}
-        onClose={() => setShowAdminPanel(false)}
-      />
-    );
-  }
-
   return (
     <div
       className="min-h-screen bg-gray-50 flex"
@@ -547,8 +301,7 @@ const ReleaseNotesApp = () => {
         showFilters={showFilters}
         setShowFilters={setShowFilters}
         releaseNotes={releaseNotes}
-        isAdmin={isAdmin}
-        setShowAdminPanel={setShowAdminPanel}
+        isAdmin={false} // Remove admin button from sidebar
         isMobileSidebarOpen={isMobileSidebarOpen}
         setIsMobileSidebarOpen={setIsMobileSidebarOpen}
       />
@@ -569,7 +322,7 @@ const ReleaseNotesApp = () => {
         selectedTags={selectedTags}
         releaseNotes={releaseNotes}
         filteredNotes={filteredNotes}
-        isAdmin={isAdmin}
+        isAdmin={false} // No admin functions on main app
         deleteNote={deleteNote}
         monthRefs={monthRefs}
         setIsMobileSidebarOpen={setIsMobileSidebarOpen}
