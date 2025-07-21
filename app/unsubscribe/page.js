@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
-export default function UnsubscribePage() {
+function UnsubscribeContent() {
   const [status, setStatus] = useState("loading"); // loading, success, error, not-found
   const [message, setMessage] = useState("");
   const searchParams = useSearchParams();
@@ -125,5 +125,30 @@ export default function UnsubscribePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function UnsubscribePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+              Unsubscribe
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">KICS Release Notes</p>
+          </div>
+          <div className="bg-white py-8 px-6 shadow rounded-lg">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-gray-600">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <UnsubscribeContent />
+    </Suspense>
   );
 }
