@@ -76,6 +76,11 @@ const AdminPanel = ({
   const [testEmail, setTestEmail] = useState("");
   const [selectedReleaseForEmail, setSelectedReleaseForEmail] = useState("");
 
+  // Job queue states
+  const [activeJobs, setActiveJobs] = useState([]);
+  const [jobPolling, setJobPolling] = useState(false);
+  const pollIntervalRef = React.useRef(null);
+
   const handleAddNewNote = async () => {
     setLoading(true);
     setError("");
@@ -193,7 +198,7 @@ const AdminPanel = ({
 
     if (
       !window.confirm(
-        `Are you sure you want to send "${selectedRelease?.title}" to ALL subscribers? This action cannot be undone.`
+        `Are you sure you want to send "${selectedRelease?.title}" to ALL subscribers? Emails will be sent in the background.`
       )
     ) {
       return;
@@ -204,7 +209,7 @@ const AdminPanel = ({
     setEmailSuccess("");
 
     try {
-      const response = await fetch("/api/send-emails", {
+      const response = await fetch("/api/email-jobs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -218,19 +223,84 @@ const AdminPanel = ({
 
       if (response.ok) {
         setEmailSuccess(
-          `📧 ${data.message}! Sent: ${data.results.sent}, Failed: ${data.results.failed}`
+          `📧 Email job created! Sending to ${data.totalEmails} subscribers in the background.`
         );
+        setSelectedReleaseForEmail("");
+        startJobPolling();
         setTimeout(() => setEmailSuccess(""), 10000);
       } else {
-        setEmailError(data.error || "Failed to send emails to subscribers");
+        setEmailError(data.error || "Failed to create email job");
       }
     } catch (error) {
-      console.error("Error sending emails:", error);
+      console.error("Error creating email job:", error);
       setEmailError("Network error. Please try again.");
     } finally {
       setEmailSending(false);
     }
   };
+
+
+  const stopJobPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+      setJobPolling(false);
+    }
+  };
+
+  const fetchAndCheckJobs = async () => {
+    try {
+      const response = await fetch("/api/email-jobs");
+      const data = await response.json();
+      if (response.ok) {
+        setActiveJobs(data.jobs || []);
+        
+        // Check if there are any jobs still actively processing
+        const activeJobsCount = data.jobs?.filter(job => 
+          job.status === 'pending' || job.status === 'processing' || job.status === 'paused'
+        ).length || 0;
+        
+        // Return true to continue, false to stop
+        return activeJobsCount > 0;
+      }
+    } catch (error) {
+      console.error("Error in job polling:", error);
+    }
+    return true; // Continue polling on error
+  };
+
+  const startJobPolling = async () => {
+    // If already polling, stop it first to restart fresh
+    if (jobPolling) {
+      stopJobPolling();
+    }
+    
+    setJobPolling(true);
+    
+    // Make immediate call
+    const shouldContinue = await fetchAndCheckJobs();
+    if (!shouldContinue) {
+      setJobPolling(false);
+      return;
+    }
+    
+    // Start polling for active jobs
+    pollIntervalRef.current = setInterval(async () => {
+      const shouldContinue = await fetchAndCheckJobs();
+      if (!shouldContinue) {
+        stopJobPolling();
+      }
+    }, 3000);
+  };
+
+  React.useEffect(() => {
+    startJobPolling(); // This will make the first call immediately and then start polling
+    
+    // Cleanup on component unmount
+    return () => {
+      stopJobPolling();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -891,6 +961,58 @@ const AdminPanel = ({
                           </div>
                         ) : null;
                       })()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Jobs Status */}
+                {activeJobs.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Clock className="w-5 h-5" />
+                      Active Email Jobs
+                    </h3>
+                    <div className="space-y-3">
+                      {activeJobs.map((job) => {
+                        const progress = job.total_emails > 0 ? 
+                          ((job.emails_sent + job.emails_failed) / job.total_emails * 100) : 0;
+                        
+                        return (
+                          <div key={job.id} className="border border-gray-200 rounded-lg p-4 bg-blue-50">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="font-medium text-gray-900">
+                                {job.release_note_title}
+                              </div>
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                job.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                job.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                                job.status === 'paused' ? 'bg-orange-100 text-orange-800' :
+                                job.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {job.status === 'completed' ? 'completed' : job.status}
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-600 mb-2">
+                              Progress: {job.emails_sent} sent, {job.emails_failed} failed out of {job.total_emails} total
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                style={{ width: `${Math.min(progress, 100)}%` }}
+                              ></div>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {Math.round(progress)}% complete
+                            </div>
+                            {job.error_message && (
+                              <div className="text-xs text-red-600 mt-2">
+                                Error: {job.error_message}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

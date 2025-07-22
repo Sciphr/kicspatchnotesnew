@@ -368,22 +368,20 @@ export async function POST(request) {
         );
       }
 
-      // Create initial notification record (only for non-test emails)
-      if (!testEmail) {
-        const [notificationResult] = await connection.execute(
-          `INSERT INTO kics_email_notifications 
-           (release_note_id, email_count, status) 
-           VALUES (?, ?, 'pending')`,
-          [releaseNoteId, emailList.length]
-        );
-        notificationId = notificationResult.insertId;
-      }
+      // Create initial notification record (for all emails, including test emails)
+      const [notificationResult] = await connection.execute(
+        `INSERT INTO kics_email_notifications 
+         (release_note_id, email_count, status) 
+         VALUES (?, ?, 'pending')`,
+        [releaseNoteId, emailList.length]
+      );
+      notificationId = notificationResult.insertId;
     } finally {
       connection.release();
     }
 
     // Create email transporter
-    const transporter = createTransport();
+    const transport = createTransport();
 
     // Generate email content
     const htmlContent = generateEmailHTML(releaseNote);
@@ -392,7 +390,7 @@ export async function POST(request) {
     // Send emails
     const emailPromises = emailList.map(async (email) => {
       try {
-        await transporter.sendMail({
+        await transport.sendMail({
           from: `"KICS Release Notes" <announcements@parklanesys.com>`,
           to: email,
           subject: `🚀 KICS v${releaseNote.version} Released - ${releaseNote.title}`,
@@ -411,8 +409,8 @@ export async function POST(request) {
     const failureCount = results.filter((r) => r.status === "failed").length;
     const failedEmails = results.filter((r) => r.status === "failed");
 
-    // Update the email notification record (only for non-test emails)
-    if (!testEmail && notificationId) {
+    // Update the email notification record (for all emails)
+    if (notificationId) {
       const dbConnection = await pool.getConnection();
       try {
         const finalStatus =
