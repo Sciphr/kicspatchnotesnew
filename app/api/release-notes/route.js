@@ -37,7 +37,7 @@ export async function GET(request) {
           created_at, 
           updated_at 
         FROM kics_release_notes 
-        ORDER BY created_at DESC`
+        ORDER BY release_date DESC`
       );
 
       // Transform the data to match the frontend format
