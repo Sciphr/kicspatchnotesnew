@@ -1,5 +1,4 @@
 import mysql from '../../lib/mysql';
-import { startEmailProcessor } from '../../lib/emailProcessor';
 
 export async function POST(request) {
   try {
@@ -23,15 +22,36 @@ export async function POST(request) {
       [releaseNoteId, totalEmails]
     );
 
-    // Start the email processor to handle the new job
-    startEmailProcessor();
-
-    return Response.json({
+    // Return immediately, then trigger processing in background
+    const response = Response.json({
       success: true,
       jobId: result.insertId,
       totalEmails: totalEmails,
-      message: 'Email job created successfully'
+      message: 'Email job created and processing started immediately'
     });
+
+    // Trigger processing in background (non-blocking)
+    setImmediate(async () => {
+      try {
+        const processResponse = await fetch(
+          `${process.env.SITE_URL || "http://localhost:3000"}/api/process-email-jobs`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        
+        const processResult = await processResponse.json();
+        console.log('Background processing triggered:', processResult);
+      } catch (error) {
+        console.error('Failed to trigger background processing:', error);
+        // Poller will pick it up anyway
+      }
+    });
+
+    return response;
 
   } catch (error) {
     console.error('Error creating email job:', error);

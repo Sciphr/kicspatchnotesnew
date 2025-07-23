@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# KICS Release Notes Application
 
-## Getting Started
+This is a [Next.js](https://nextjs.org) project for managing and sending release note emails.
+
+## Email Processing
+
+This application now uses **server-side email processing** instead of browser-based processing.
+
+### How to run:
+
+1. **Start the main application:**
+   ```bash
+   npm run start
+   ```
+
+2. **Start the email worker (in a separate terminal):**
+   ```bash
+   npm run email-worker
+   ```
+
+### How it works:
+
+- When you create an email job through the web interface, it's saved to the database
+- The `emailWorker.js` process runs continuously and automatically processes jobs
+- **Active mode:** Checks for jobs every 5 seconds when jobs exist
+- **Idle mode:** Checks every 30 seconds when no jobs (saves resources)
+- Automatically switches between modes as needed
+- Jobs continue processing even if you close your browser or refresh the page
+- The worker handles batching (15 emails per batch with 4-second delays)
+- Jobs survive server restarts (you just need to restart the worker)
+
+### Benefits:
+
+- ✅ Browser-independent processing
+- ✅ Jobs survive page refreshes
+- ✅ Reliable background processing  
+- ✅ Easy to monitor via worker logs
+- ✅ Graceful shutdown with Ctrl+C
+
+### Production deployment:
+
+For production, you should run the email worker as a service using:
+- **Windows:** Windows Service or Task Scheduler
+- **Linux:** systemd service or PM2
+- **Docker:** Separate container for the worker
+
+## Development
 
 First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

@@ -95,6 +95,7 @@ export default function AdminPage() {
           changes: newNote.changes.filter(
             (change) => change.text.trim() !== ""
           ),
+          date: newNote.date,
         }),
       });
 
@@ -169,6 +170,7 @@ export default function AdminPage() {
           changes: editingData.changes.filter(
             (change) => change.text.trim() !== ""
           ),
+          date: editingData.date,
         }),
       });
 

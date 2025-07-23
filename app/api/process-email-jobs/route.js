@@ -3,7 +3,7 @@ import nodemailer from "nodemailer";
 
 const BATCH_SIZE = 15; // Send 15 emails per batch
 const BATCH_DELAY = 60000; // Wait 1 minute between batches
-const EMAIL_DELAY = 4000; // Wait 4 seconds between individual emails
+const EMAIL_DELAY = 5000; // Wait 5 seconds between individual emails
 
 function createTransport() {
   return nodemailer.createTransport({
@@ -85,16 +85,9 @@ function generateEmailHTML(releaseNote) {
           border-bottom: 2px solid #e5e7eb;
         }
         .logo {
-          width: 48px;
-          height: 48px;
-          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-          border-radius: 12px;
+          height: 60px;
           margin: 0 auto 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 20px;
+          display: block;
         }
         .version-badge {
   display: inline-block;
@@ -169,7 +162,11 @@ function generateEmailHTML(releaseNote) {
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">🔔</div>
+          <img src="${process.env.SITE_URL || "http://localhost:3000"}/kicshorizontal.png" 
+               alt="KICS" 
+               width="240" 
+               height="60" 
+               style="height: 60px !important; width: 240px !important; max-width: 240px !important; margin: 0 auto 16px; display: block; border: 0;">
           <h1 style="margin: 0; color: #111827; font-size: 28px;">KICS Release Notes</h1>
           <p style="margin: 8px 0 0; color: #6b7280;">Stay updated with our latest changes</p>
         </div>
@@ -318,7 +315,7 @@ async function processEmailBatch(job, releaseNote, transport) {
       await transport.sendMail(mailOptions);
       batchSuccess++;
 
-      // 4 second delay between individual emails
+      // 5 second delay between individual emails
       await new Promise((resolve) => setTimeout(resolve, EMAIL_DELAY));
     } catch (error) {
       if (isIndividualEmailError(error)) {
@@ -370,9 +367,21 @@ async function processEmailBatch(job, releaseNote, transport) {
 
     await mysql.execute(
       `INSERT INTO kics_email_notifications 
-       (release_note_id, email_count, status, error_message, sent_at) 
-       VALUES (?, ?, ?, ?, NOW())`,
+       (release_note_id, email_count, status, error_message, email_type, sent_at) 
+       VALUES (?, ?, ?, ?, 'bulk', NOW())`,
       [job.release_note_id, job.total_emails, finalStatus, errorMessage]
+    );
+
+    // Auto-cleanup: Keep only the most recent 100 email history records
+    await mysql.execute(
+      `DELETE FROM kics_email_notifications 
+       WHERE id NOT IN (
+         SELECT id FROM (
+           SELECT id FROM kics_email_notifications 
+           ORDER BY sent_at DESC 
+           LIMIT 100
+         ) AS recent_records
+       )`
     );
   }
 
@@ -392,15 +401,15 @@ async function processEmailBatch(job, releaseNote, transport) {
 
 export async function POST(request) {
   try {
-    // Get pending or processing jobs
+    // Get pending jobs and immediately lock them to prevent race conditions
     const [jobRows] = await mysql.execute(
       `SELECT ej.*, rn.title, rn.version, rn.type as version_type, rn.description, rn.tags, rn.notes as changes, rn.created_at as release_date
        FROM kics_email_jobs ej 
        JOIN kics_release_notes rn ON ej.release_note_id = rn.id 
-       WHERE ej.status IN ('pending', 'processing') 
+       WHERE ej.status = 'pending'
        AND (ej.next_retry_at IS NULL OR ej.next_retry_at <= NOW())
        ORDER BY ej.created_at ASC 
-       LIMIT 1`
+       LIMIT 1 FOR UPDATE`
     );
 
     if (jobRows.length === 0) {
@@ -408,6 +417,12 @@ export async function POST(request) {
     }
 
     const job = jobRows[0];
+
+    // Immediately mark job as processing to prevent refresh retrigger
+    await mysql.execute(
+      "UPDATE kics_email_jobs SET status = 'processing', started_at = NOW() WHERE id = ?",
+      [job.id]
+    );
 
     // Parse JSON fields properly like individual email system
     const tags = (() => {
@@ -441,14 +456,8 @@ export async function POST(request) {
     const transport = createTransport();
 
     try {
-      // Mark job as processing if it's pending
-      if (job.status === "pending") {
-        await mysql.execute(
-          "UPDATE kics_email_jobs SET status = ?, started_at = ? WHERE id = ?",
-          ["processing", new Date(), job.id]
-        );
-        job.status = "processing";
-      }
+      // Job already marked as processing above
+      job.status = "processing";
 
       // Process a batch
       const result = await processEmailBatch(job, releaseNote, transport);

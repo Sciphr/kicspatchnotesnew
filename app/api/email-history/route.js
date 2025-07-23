@@ -2,13 +2,13 @@
 import { NextResponse } from "next/server";
 import pool from "../../lib/mysql";
 
-// GET - Fetch email notification history
+// GET - Fetch all email notification history (client-side pagination)
 export async function GET(request) {
   try {
     const connection = await pool.getConnection();
 
     try {
-      // Fetch email notification history with release note details
+      // Fetch all email notification history with release note details
       const [rows] = await connection.execute(
         `SELECT 
           en.id,
@@ -17,6 +17,7 @@ export async function GET(request) {
           en.sent_at,
           en.status,
           en.error_message,
+          en.email_type,
           rn.version,
           rn.title,
           rn.type
@@ -33,6 +34,7 @@ export async function GET(request) {
         sent_at: row.sent_at,
         status: row.status,
         error_message: row.error_message,
+        email_type: row.email_type || "bulk",
         version: row.version || "Unknown",
         title: row.title || "Deleted Release",
         type: row.type || "unknown",
@@ -41,7 +43,7 @@ export async function GET(request) {
       return NextResponse.json(
         {
           history: history,
-          count: history.length,
+          totalRecords: history.length,
         },
         { status: 200 }
       );

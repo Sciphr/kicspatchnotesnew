@@ -68,6 +68,8 @@ const AdminPanel = ({
   const [activeTab, setActiveTab] = useState("releases");
   const [emailHistory, setEmailHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
 
   // Email sending states
   const [emailSending, setEmailSending] = useState(false);
@@ -100,6 +102,7 @@ const AdminPanel = ({
       const data = await response.json();
       if (response.ok) {
         setEmailHistory(data.history || []);
+        setCurrentPage(1); // Reset to first page when refreshing
       } else {
         console.error("Failed to fetch email history:", data.error);
       }
@@ -109,6 +112,14 @@ const AdminPanel = ({
       setHistoryLoading(false);
     }
   };
+
+  // Client-side pagination calculations
+  const totalPages = Math.ceil(emailHistory.length / recordsPerPage);
+  const startIndex = (currentPage - 1) * recordsPerPage;
+  const endIndex = startIndex + recordsPerPage;
+  const currentRecords = emailHistory.slice(startIndex, endIndex);
+  const hasNextPage = currentPage < totalPages;
+  const hasPrevPage = currentPage > 1;
 
   const handleDeleteNote = async (id) => {
     if (window.confirm("Are you sure you want to delete this release note?")) {
@@ -226,8 +237,11 @@ const AdminPanel = ({
           `📧 Email job created! Sending to ${data.totalEmails} subscribers in the background.`
         );
         setSelectedReleaseForEmail("");
-        startJobPolling();
+        // No polling - backend handles everything
         setTimeout(() => setEmailSuccess(""), 10000);
+        
+        // Redirect to prevent resubmission on refresh
+        window.history.replaceState({}, '', window.location.pathname);
       } else {
         setEmailError(data.error || "Failed to create email job");
       }
@@ -294,7 +308,7 @@ const AdminPanel = ({
   };
 
   React.useEffect(() => {
-    startJobPolling(); // This will make the first call immediately and then start polling
+    // No auto-polling - only create jobs when user triggers
     
     // Cleanup on component unmount
     return () => {
@@ -1126,54 +1140,94 @@ const AdminPanel = ({
                   <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-600" />
                   <p className="text-gray-600">Loading email history...</p>
                 </div>
-              ) : emailHistory.length === 0 ? (
+              ) : currentRecords.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No email notifications sent yet</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {emailHistory.map((record) => (
-                    <div
-                      key={record.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="font-medium text-gray-900">
-                              v{record.version} - {record.title}
-                            </span>
-                            <span
-                              className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                record.status === "sent"
-                                  ? "bg-green-100 text-green-800"
-                                  : record.status === "failed"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {record.status}
-                            </span>
-                          </div>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <div>
-                              📧 Sent to {record.email_count} subscribers
+                <>
+                  <div className="space-y-4">
+                    {currentRecords.map((record) => (
+                      <div
+                        key={record.id}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="font-medium text-gray-900">
+                                v{record.version} - {record.title}
+                              </span>
+                              <span
+                                className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                  record.status === "sent"
+                                    ? "bg-green-100 text-green-800"
+                                    : record.status === "failed"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                }`}
+                              >
+                                {record.status}
+                              </span>
+                              <span
+                                className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                  record.email_type === "individual"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-purple-100 text-purple-800"
+                                }`}
+                              >
+                                {record.email_type === "individual" ? "Test Email" : "All Subscribers"}
+                              </span>
                             </div>
-                            <div>
-                              📅 {new Date(record.sent_at).toLocaleString()}
-                            </div>
-                            {record.error_message && (
-                              <div className="text-red-600">
-                                ❌ {record.error_message}
+                            <div className="text-sm text-gray-600 space-y-1">
+                              <div>
+                                📧 Sent to {record.email_count} subscribers
                               </div>
-                            )}
+                              <div>
+                                📅 {new Date(record.sent_at).toLocaleString()}
+                              </div>
+                              {record.error_message && (
+                                <div className="text-red-600">
+                                  ❌ {record.error_message}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
+                    ))}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                      <div className="text-sm text-gray-600">
+                        Showing {startIndex + 1} to{" "}
+                        {Math.min(endIndex, emailHistory.length)} of{" "}
+                        {emailHistory.length} entries
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          disabled={!hasPrevPage}
+                          className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+                        <span className="text-sm text-gray-600">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          disabled={!hasNextPage}
+                          className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </div>
           </div>

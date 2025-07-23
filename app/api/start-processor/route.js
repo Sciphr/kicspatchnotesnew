@@ -1,11 +1,10 @@
-import { startEmailProcessor } from '../../lib/emailProcessor';
-
 export async function POST(request) {
   try {
-    startEmailProcessor();
-    return Response.json({ success: true, message: 'Email processor started' });
+    // Email processing is now handled server-side by emailWorker.js
+    // This endpoint is no longer needed but kept for backward compatibility
+    return Response.json({ success: true, message: 'Email processing handled by server worker' });
   } catch (error) {
-    console.error('Error starting email processor:', error);
-    return Response.json({ error: 'Failed to start email processor' }, { status: 500 });
+    console.error('Error in start-processor endpoint:', error);
+    return Response.json({ error: 'Email processing handled by server worker' }, { status: 500 });
   }
 }

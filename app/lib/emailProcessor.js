@@ -1,51 +1,67 @@
 let processingInterval = null;
 let isProcessing = false;
+let transferActive = false;
+
+async function processEmailJobs() {
+  if (isProcessing || transferActive) {
+    console.log("Skipping poll - processor busy or transfer active");
+    return;
+  }
+
+  try {
+    isProcessing = true;
+
+    const response = await fetch(
+      `${
+        process.env.SITE_URL || "http://localhost:3000"
+      }/api/process-email-jobs`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+      if (result.jobId) {
+        transferActive = true; // Set flag when job starts
+        console.log(
+          `Processing job ${result.jobId}: ${result.batchSent} sent, ${result.batchFailed} failed`
+        );
+        if (result.isCompleted) {
+          console.log(`Job ${result.jobId} completed!`);
+          transferActive = false; // Clear flag when job completes
+        }
+      }
+    } else if (result.message === "No jobs to process") {
+      console.log("No email jobs to process");
+      transferActive = false; // Ensure flag is cleared
+    } else if (result.error) {
+      console.error("Email processor error:", result.error);
+      transferActive = false; // Clear flag on error
+    }
+  } catch (error) {
+    console.error("Email processor fetch error:", error);
+    transferActive = false; // Clear flag on error
+  } finally {
+    isProcessing = false;
+  }
+}
 
 export function startEmailProcessor() {
   if (processingInterval) {
     return; // Already running
   }
 
-  console.log('Starting email processor...');
-  
-  processingInterval = setInterval(async () => {
-    if (isProcessing) {
-      return; // Skip if already processing
-    }
+  console.log("Starting email processor (checking every 10 minutes)...");
 
-    try {
-      isProcessing = true;
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/process-email-jobs`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  // Check immediately for pending jobs on startup
+  processEmailJobs();
 
-      const result = await response.json();
-      
-      if (result.success) {
-        if (result.jobId) {
-          console.log(`Processed batch for job ${result.jobId}: ${result.batchSent} sent, ${result.batchFailed} failed`);
-          if (result.isCompleted) {
-            console.log(`Job ${result.jobId} completed!`);
-          }
-        }
-      } else if (result.message === 'No jobs to process') {
-        // Stop processor when no jobs are available
-        stopEmailProcessor();
-        console.log('No email jobs to process - processor stopped');
-      } else if (result.error) {
-        console.error('Email processor error:', result.error);
-      }
-
-    } catch (error) {
-      console.error('Email processor fetch error:', error);
-    } finally {
-      isProcessing = false;
-    }
-  }, 5000); // Check every 5 seconds
+  processingInterval = setInterval(processEmailJobs, 600000); // Check every 10 minutes
 }
 
 export function stopEmailProcessor() {
@@ -53,6 +69,6 @@ export function stopEmailProcessor() {
     clearInterval(processingInterval);
     processingInterval = null;
     isProcessing = false;
-    console.log('Email processor stopped');
+    console.log("Email processor stopped");
   }
 }

@@ -86,16 +86,9 @@ const generateEmailHTML = (releaseNote) => {
           border-bottom: 2px solid #e5e7eb;
         }
         .logo {
-          width: 48px;
-          height: 48px;
-          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-          border-radius: 12px;
+          height: 60px;
           margin: 0 auto 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 20px;
+          display: block;
         }
         .version-badge {
   display: inline-block;
@@ -170,7 +163,11 @@ const generateEmailHTML = (releaseNote) => {
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">🔔</div>
+          <img src="${process.env.SITE_URL || "http://localhost:3000"}/kicshorizontal.png" 
+               alt="KICS" 
+               width="240" 
+               height="60" 
+               style="height: 60px !important; width: 240px !important; max-width: 240px !important; margin: 0 auto 16px; display: block; border: 0;">
           <h1 style="margin: 0; color: #111827; font-size: 28px;">KICS Release Notes</h1>
           <p style="margin: 8px 0 0; color: #6b7280;">Stay updated with our latest changes</p>
         </div>
@@ -371,9 +368,9 @@ export async function POST(request) {
       // Create initial notification record (for all emails, including test emails)
       const [notificationResult] = await connection.execute(
         `INSERT INTO kics_email_notifications 
-         (release_note_id, email_count, status) 
-         VALUES (?, ?, 'pending')`,
-        [releaseNoteId, emailList.length]
+         (release_note_id, email_count, status, email_type) 
+         VALUES (?, ?, 'pending', ?)`,
+        [releaseNoteId, emailList.length, testEmail ? 'individual' : 'bulk']
       );
       notificationId = notificationResult.insertId;
     } finally {

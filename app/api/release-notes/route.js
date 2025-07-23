@@ -33,6 +33,7 @@ export async function GET(request) {
           type, 
           tags, 
           notes, 
+          release_date,
           created_at, 
           updated_at 
         FROM kics_release_notes 
@@ -58,7 +59,7 @@ export async function GET(request) {
           type: row.type,
           tags: Array.isArray(tags) ? tags : [],
           changes: validChanges,
-          date: row.created_at.toISOString().split("T")[0], // Format as YYYY-MM-DD
+          date: row.release_date || row.created_at.toISOString().split("T")[0], // Use release_date or format created_at as date only
           created_at: row.created_at,
           updated_at: row.updated_at,
         };
@@ -88,7 +89,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { version, title, description, type, tags, changes } = body;
+    const { version, title, description, type, tags, changes, date } = body;
 
     // Prepare data for validation
     const releaseData = {
@@ -117,8 +118,8 @@ export async function POST(request) {
     try {
       const [result] = await connection.execute(
         `INSERT INTO kics_release_notes 
-         (version, title, description, type, tags, notes, created_at) 
-         VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+         (version, title, description, type, tags, notes, release_date, created_at) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           cleanData.version,
           cleanData.title,
@@ -126,6 +127,7 @@ export async function POST(request) {
           cleanData.type,
           JSON.stringify(cleanData.tags),
           JSON.stringify(cleanData.notes),
+          date ? new Date(date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         ]
       );
 
@@ -161,7 +163,7 @@ export async function POST(request) {
 export async function PUT(request) {
   try {
     const body = await request.json();
-    const { id, version, title, description, type, tags, changes } = body;
+    const { id, version, title, description, type, tags, changes, date } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -197,7 +199,7 @@ export async function PUT(request) {
     try {
       const [result] = await connection.execute(
         `UPDATE kics_release_notes 
-         SET version = ?, title = ?, description = ?, type = ?, tags = ?, notes = ?, updated_at = NOW()
+         SET version = ?, title = ?, description = ?, type = ?, tags = ?, notes = ?, release_date = ?, updated_at = NOW()
          WHERE id = ?`,
         [
           cleanData.version,
@@ -206,6 +208,7 @@ export async function PUT(request) {
           cleanData.type,
           JSON.stringify(cleanData.tags),
           JSON.stringify(cleanData.notes),
+          date ? new Date(date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
           id,
         ]
       );
