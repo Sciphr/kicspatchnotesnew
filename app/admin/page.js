@@ -143,7 +143,9 @@ export default function AdminPage() {
 
   const startEditing = (note) => {
     setEditingNote(note.id);
-    setEditingData({ ...note });
+    // Ensure the date is properly formatted for HTML date input (YYYY-MM-DD)
+    const formattedDate = note.date ? new Date(note.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+    setEditingData({ ...note, date: formattedDate });
     setEditingTagsInput(note.tags ? note.tags.join(", ") : "");
   };
 
@@ -175,20 +177,12 @@ export default function AdminPage() {
       });
 
       if (response.ok) {
-        const updatedNotes = releaseNotes.map((note) =>
-          note.id === editingNote
-            ? {
-                ...editingData,
-                changes: editingData.changes.filter(
-                  (change) => change.text.trim() !== ""
-                ),
-              }
-            : note
-        );
-        setReleaseNotes(updatedNotes);
+        // Clear editing state
         setEditingNote(null);
         setEditingData(null);
         setEditingTagsInput("");
+        // Refresh the release notes list to show updated and properly sorted data
+        await fetchReleaseNotes();
       } else {
         const data = await response.json();
         throw new Error(data.error || "Failed to update release note");
