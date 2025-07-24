@@ -83,6 +83,10 @@ const AdminPanel = ({
   const [jobPolling, setJobPolling] = useState(false);
   const pollIntervalRef = React.useRef(null);
 
+  // Subscriber count state
+  const [subscriberCount, setSubscriberCount] = useState(null);
+  const [subscriberCountLoading, setSubscriberCountLoading] = useState(false);
+
   const handleAddNewNote = async () => {
     setLoading(true);
     setError("");
@@ -110,6 +114,23 @@ const AdminPanel = ({
       console.error("Error fetching email history:", error);
     } finally {
       setHistoryLoading(false);
+    }
+  };
+
+  const fetchSubscriberCount = async () => {
+    setSubscriberCountLoading(true);
+    try {
+      const response = await fetch("/api/subscriber-count");
+      const data = await response.json();
+      if (response.ok) {
+        setSubscriberCount(data.count);
+      } else {
+        console.error("Failed to fetch subscriber count:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching subscriber count:", error);
+    } finally {
+      setSubscriberCountLoading(false);
     }
   };
 
@@ -308,7 +329,8 @@ const AdminPanel = ({
   };
 
   React.useEffect(() => {
-    // No auto-polling - only create jobs when user triggers
+    // Fetch subscriber count on component mount
+    fetchSubscriberCount();
     
     // Cleanup on component unmount
     return () => {
@@ -901,6 +923,23 @@ const AdminPanel = ({
                 <Mail className="w-6 h-6" />
                 Email Notifications
               </h2>
+
+              {/* Subscriber Count */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    Total Subscribers:
+                  </span>
+                  {subscriberCountLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                  ) : (
+                    <span className="text-lg font-bold text-purple-600">
+                      {subscriberCount !== null ? subscriberCount.toLocaleString() : "—"}
+                    </span>
+                  )}
+                </div>
+              </div>
 
               <div className="space-y-8">
                 {/* Success Message */}
