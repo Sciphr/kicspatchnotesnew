@@ -98,7 +98,7 @@ function restartInterval() {
 
         const response = await fetch(
           `${
-            process.env.NEXT_SITE_URL || "http://localhost:3000"
+            process.env.SITE_URL || "http://localhost:3000"
           }/api/process-email-jobs`,
           {
             method: "POST",
