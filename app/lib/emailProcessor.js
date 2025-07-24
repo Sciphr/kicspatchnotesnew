@@ -56,12 +56,12 @@ export function startEmailProcessor() {
     return; // Already running
   }
 
-  console.log("Starting email processor (checking every 10 minutes)...");
+  console.log("Starting email processor (checking every 5 minutes)...");
 
   // Check immediately for pending jobs on startup
   processEmailJobs();
 
-  processingInterval = setInterval(processEmailJobs, 600000); // Check every 10 minutes
+  processingInterval = setInterval(processEmailJobs, 300000); // Check every 5 minutes
 }
 
 export function stopEmailProcessor() {

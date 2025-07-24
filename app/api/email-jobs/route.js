@@ -22,36 +22,41 @@ export async function POST(request) {
       [releaseNoteId, totalEmails]
     );
 
-    // Return immediately, then trigger processing in background
-    const response = Response.json({
-      success: true,
-      jobId: result.insertId,
-      totalEmails: totalEmails,
-      message: 'Email job created and processing started immediately'
-    });
-
-    // Trigger processing in background (non-blocking)
-    setImmediate(async () => {
-      try {
-        const processResponse = await fetch(
-          `${process.env.SITE_URL || "http://localhost:3000"}/api/process-email-jobs`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        
-        const processResult = await processResponse.json();
-        console.log('Background processing triggered:', processResult);
-      } catch (error) {
-        console.error('Failed to trigger background processing:', error);
-        // Poller will pick it up anyway
-      }
-    });
-
-    return response;
+    // Immediately trigger processing and wait for first batch
+    try {
+      const processResponse = await fetch(
+        `${process.env.SITE_URL || "http://localhost:3000"}/api/process-email-jobs`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
+      const processResult = await processResponse.json();
+      console.log('Immediate processing result:', processResult);
+      
+      return Response.json({
+        success: true,
+        jobId: result.insertId,
+        totalEmails: totalEmails,
+        message: 'Email job started immediately',
+        firstBatch: processResult // Include first batch result
+      });
+      
+    } catch (error) {
+      console.error('Failed to start immediate processing:', error);
+      
+      // Return job created but processing will be picked up by poller
+      return Response.json({
+        success: true,
+        jobId: result.insertId,
+        totalEmails: totalEmails,
+        message: 'Email job created - processing will begin shortly',
+        processingError: error.message
+      });
+    }
 
   } catch (error) {
     console.error('Error creating email job:', error);
