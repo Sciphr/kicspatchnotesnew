@@ -22,16 +22,8 @@ export async function POST(request) {
       [releaseNoteId, totalEmails]
     );
 
-    // Create response first
-    const response = Response.json({
-      success: true,
-      jobId: result.insertId,
-      totalEmails: totalEmails,
-      message: 'Email job started - processing immediately'
-    });
-
-    // Trigger processing immediately after response (non-blocking)
-    setImmediate(async () => {
+    // Trigger processing in background immediately (don't await)
+    const triggerProcessing = async () => {
       try {
         console.log('Triggering immediate processing for job:', result.insertId);
         const processResponse = await fetch(
@@ -50,9 +42,18 @@ export async function POST(request) {
         console.error('Failed to trigger immediate processing:', error);
         // The background pollers will pick it up
       }
-    });
+    };
 
-    return response;
+    // Start processing but don't wait for it
+    triggerProcessing();
+
+    // Return response immediately
+    return Response.json({
+      success: true,
+      jobId: result.insertId,
+      totalEmails: totalEmails,
+      message: 'Email job started - processing immediately'
+    });
 
   } catch (error) {
     console.error('Error creating email job:', error);
