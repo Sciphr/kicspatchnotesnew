@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { processEmailJobs } from "../lib/emailProcessor";
 import {
   Settings,
   X,
@@ -255,6 +256,14 @@ const AdminPanel = ({
         );
         setSelectedReleaseForEmail("");
         setTimeout(() => setEmailSuccess(""), 10000);
+        
+        // Immediately trigger email processing
+        console.log("Triggering immediate email processing...");
+        processEmailJobs().then(() => {
+          console.log("Immediate email processing completed");
+        }).catch((error) => {
+          console.error("Immediate email processing failed:", error);
+        });
         
         // Redirect to prevent resubmission on refresh
         window.history.replaceState({}, '', window.location.pathname);

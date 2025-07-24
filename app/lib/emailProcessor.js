@@ -1,8 +1,7 @@
-let processingInterval = null;
 let isProcessing = false;
 let transferActive = false;
 
-async function processEmailJobs() {
+export async function processEmailJobs() {
   if (isProcessing || transferActive) {
     console.log("Skipping poll - processor busy or transfer active");
     return;
@@ -51,24 +50,4 @@ async function processEmailJobs() {
   }
 }
 
-export function startEmailProcessor() {
-  if (processingInterval) {
-    return; // Already running
-  }
-
-  console.log("Starting email processor (checking every 5 minutes)...");
-
-  // Check immediately for pending jobs on startup
-  processEmailJobs();
-
-  processingInterval = setInterval(processEmailJobs, 300000); // Check every 5 minutes
-}
-
-export function stopEmailProcessor() {
-  if (processingInterval) {
-    clearInterval(processingInterval);
-    processingInterval = null;
-    isProcessing = false;
-    console.log("Email processor stopped");
-  }
-}
+// Removed automatic polling - processEmailJobs() is now called manually when needed
