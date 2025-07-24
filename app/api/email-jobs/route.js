@@ -1,4 +1,5 @@
 import mysql from '../../lib/mysql';
+import { processCompleteEmailJob } from '../../lib/serverEmailProcessor';
 
 export async function POST(request) {
   try {
@@ -22,11 +23,22 @@ export async function POST(request) {
       [releaseNoteId, totalEmails]
     );
 
+    // Start complete job processing in background (don't await)
+    const jobId = result.insertId;
+    console.log(`Starting background processing for job ${jobId}`);
+    
+    // Process the complete job asynchronously
+    processCompleteEmailJob(jobId).then((result) => {
+      console.log(`Background job ${jobId} processing completed:`, result);
+    }).catch((error) => {
+      console.error(`Background job ${jobId} processing failed:`, error);
+    });
+
     return Response.json({
       success: true,
-      jobId: result.insertId,
+      jobId: jobId,
       totalEmails: totalEmails,
-      message: 'Email job created successfully'
+      message: `Email job started! Processing ${totalEmails} subscribers in the background.`
     });
 
   } catch (error) {
