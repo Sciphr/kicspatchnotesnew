@@ -22,41 +22,37 @@ export async function POST(request) {
       [releaseNoteId, totalEmails]
     );
 
-    // Immediately trigger processing and wait for first batch
-    try {
-      const processResponse = await fetch(
-        `${process.env.SITE_URL || "http://localhost:3000"}/api/process-email-jobs`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      
-      const processResult = await processResponse.json();
-      console.log('Immediate processing result:', processResult);
-      
-      return Response.json({
-        success: true,
-        jobId: result.insertId,
-        totalEmails: totalEmails,
-        message: 'Email job started immediately',
-        firstBatch: processResult // Include first batch result
-      });
-      
-    } catch (error) {
-      console.error('Failed to start immediate processing:', error);
-      
-      // Return job created but processing will be picked up by poller
-      return Response.json({
-        success: true,
-        jobId: result.insertId,
-        totalEmails: totalEmails,
-        message: 'Email job created - processing will begin shortly',
-        processingError: error.message
-      });
-    }
+    // Create response first
+    const response = Response.json({
+      success: true,
+      jobId: result.insertId,
+      totalEmails: totalEmails,
+      message: 'Email job started - processing immediately'
+    });
+
+    // Trigger processing immediately after response (non-blocking)
+    setImmediate(async () => {
+      try {
+        console.log('Triggering immediate processing for job:', result.insertId);
+        const processResponse = await fetch(
+          `${process.env.SITE_URL || "http://localhost:3000"}/api/process-email-jobs`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        
+        const processResult = await processResponse.json();
+        console.log('Immediate processing completed:', processResult);
+      } catch (error) {
+        console.error('Failed to trigger immediate processing:', error);
+        // The background pollers will pick it up
+      }
+    });
+
+    return response;
 
   } catch (error) {
     console.error('Error creating email job:', error);
