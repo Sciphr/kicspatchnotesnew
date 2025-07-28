@@ -23,6 +23,10 @@ const ReleaseNotesApp = () => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Pagination states
+  const [visibleCount, setVisibleCount] = useState(15);
+  const itemsPerPage = 15;
+
   // Admin state (for showing/hiding admin button)
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -105,6 +109,10 @@ const ReleaseNotesApp = () => {
       selectedTags.some((tag) => note.tags.includes(tag));
     return monthMatch && tagMatch;
   });
+
+  // Get visible notes based on pagination
+  const visibleNotes = filteredNotes.slice(0, visibleCount);
+  const hasMoreNotes = filteredNotes.length > visibleCount;
 
   const handleSubscribe = async (e) => {
     e.preventDefault();
@@ -221,8 +229,14 @@ const ReleaseNotesApp = () => {
 
   // Filter handlers
   const handleMonthSelect = (month) => {
-    setSelectedMonth(month);
+    // If clicking the same month, toggle it off (return to "all")
+    if (selectedMonth === month) {
+      setSelectedMonth("all");
+    } else {
+      setSelectedMonth(month);
+    }
     setShowFilters(false);
+    setVisibleCount(15); // Reset pagination when filter changes
     // Close mobile sidebar when filter is selected
     setIsMobileSidebarOpen(false);
   };
@@ -231,10 +245,17 @@ const ReleaseNotesApp = () => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
+    setVisibleCount(15); // Reset pagination when filter changes
   };
 
   const clearAllTags = () => {
     setSelectedTags([]);
+    setVisibleCount(15); // Reset pagination when filter changes
+  };
+
+  // Pagination handlers
+  const handleShowMore = () => {
+    setVisibleCount(prevCount => prevCount + itemsPerPage);
   };
 
   // Dummy delete function for non-admin users (shouldn't be called)
@@ -321,7 +342,10 @@ const ReleaseNotesApp = () => {
         selectedMonth={selectedMonth}
         selectedTags={selectedTags}
         releaseNotes={releaseNotes}
-        filteredNotes={filteredNotes}
+        filteredNotes={visibleNotes}
+        totalFilteredCount={filteredNotes.length}
+        hasMoreNotes={hasMoreNotes}
+        onShowMore={handleShowMore}
         isAdmin={false} // No admin functions on main app
         deleteNote={deleteNote}
         monthRefs={monthRefs}
