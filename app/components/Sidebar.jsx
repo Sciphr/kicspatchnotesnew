@@ -68,10 +68,10 @@ const Sidebar = ({
   useEffect(() => {
     if (uniqueMonths.length > 0) {
       const yearGroups = groupMonthsByYear(uniqueMonths);
-      
+
       const defaultExpanded = {};
       // All years start collapsed - no auto-expansion
-      
+
       setExpandedYears(defaultExpanded);
     }
   }, [uniqueMonths]);
@@ -300,7 +300,8 @@ const Sidebar = ({
               Filter Releases
               {(selectedMonth !== "all" || selectedTags.length > 0) && (
                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
-                  {(selectedMonth !== "all" ? 1 : 0) + selectedTags.length} active
+                  {(selectedMonth !== "all" ? 1 : 0) + selectedTags.length}{" "}
+                  active
                 </span>
               )}
             </h2>
@@ -361,107 +362,113 @@ const Sidebar = ({
               </div>
             </div>
 
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${monthSectionExpanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                monthSectionExpanded
+                  ? "max-h-screen opacity-100"
+                  : "max-h-0 opacity-0"
+              }`}
+            >
               <div className="pl-4 space-y-1">
-                  {/* All Months Option */}
-                  <button
-                    onClick={() => handleMonthSelect("all")}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-150 flex items-center justify-between group ${
-                      selectedMonth === "all"
-                        ? "text-blue-700 font-medium bg-blue-50 border border-blue-200"
-                        : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                    }`}
-                  >
-                    <span>All Months</span>
-                    <div className="w-4 h-4 flex items-center justify-center">
-                      <CheckCircle
-                        className={`w-4 h-4 text-blue-600 transition-all duration-300 ease-out ${
-                          selectedMonth === "all"
-                            ? "opacity-100 scale-100"
-                            : "opacity-0 scale-75"
-                        }`}
-                      />
+                {/* All Months Option */}
+                <button
+                  onClick={() => handleMonthSelect("all")}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-150 flex items-center justify-between group ${
+                    selectedMonth === "all"
+                      ? "text-blue-700 font-medium bg-blue-50 border border-blue-200"
+                      : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                  }`}
+                >
+                  <span>All Months</span>
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    <CheckCircle
+                      className={`w-4 h-4 text-blue-600 transition-all duration-300 ease-out ${
+                        selectedMonth === "all"
+                          ? "opacity-100 scale-100"
+                          : "opacity-0 scale-75"
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {/* Year-grouped months */}
+                {Object.entries(groupMonthsByYear(uniqueMonths))
+                  .sort(([a], [b]) => b - a) // Sort years descending (newest first)
+                  .map(([year, months]) => (
+                    <div key={year} className="space-y-1">
+                      {/* Year Header */}
+                      <button
+                        onClick={() => toggleYear(year)}
+                        className="w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-150 flex items-center justify-between group hover:bg-gray-50 font-medium text-gray-700"
+                      >
+                        <span className="flex items-center gap-2">
+                          {expandedYears[year] ? (
+                            <ChevronDown className="w-4 h-4 text-gray-500" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-gray-500" />
+                          )}
+                          {year}
+                        </span>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                          {months.length}
+                        </span>
+                      </button>
+
+                      {/* Months for this year */}
+                      {expandedYears[year] && (
+                        <div className="ml-6 space-y-1 border-l-2 border-gray-100 pl-3">
+                          {months
+                            .sort((a, b) => {
+                              // Sort months by date (most recent first)
+                              const monthOrder = [
+                                "January",
+                                "February",
+                                "March",
+                                "April",
+                                "May",
+                                "June",
+                                "July",
+                                "August",
+                                "September",
+                                "October",
+                                "November",
+                                "December",
+                              ];
+                              const aMonth = monthOrder.indexOf(
+                                a.split(" ")[0]
+                              );
+                              const bMonth = monthOrder.indexOf(
+                                b.split(" ")[0]
+                              );
+                              return bMonth - aMonth;
+                            })
+                            .map((month) => (
+                              <button
+                                key={month}
+                                onClick={() => handleMonthSelect(month)}
+                                className={`w-full text-left px-3 py-1.5 rounded-md text-sm transition-all duration-150 flex items-center justify-between group ${
+                                  selectedMonth === month
+                                    ? "text-blue-700 font-medium bg-blue-50 border border-blue-200"
+                                    : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+                                }`}
+                              >
+                                <span>{month.split(" ")[0]}</span>{" "}
+                                {/* Show just month name */}
+                                <div className="w-4 h-4 flex items-center justify-center">
+                                  <CheckCircle
+                                    className={`w-3 h-3 text-blue-600 transition-all duration-300 ease-out ${
+                                      selectedMonth === month
+                                        ? "opacity-100 scale-100"
+                                        : "opacity-0 scale-75"
+                                    }`}
+                                  />
+                                </div>
+                              </button>
+                            ))}
+                        </div>
+                      )}
                     </div>
-                  </button>
-
-                  {/* Year-grouped months */}
-                  {Object.entries(groupMonthsByYear(uniqueMonths))
-                    .sort(([a], [b]) => b - a) // Sort years descending (newest first)
-                    .map(([year, months]) => (
-                      <div key={year} className="space-y-1">
-                        {/* Year Header */}
-                        <button
-                          onClick={() => toggleYear(year)}
-                          className="w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-150 flex items-center justify-between group hover:bg-gray-50 font-medium text-gray-700"
-                        >
-                          <span className="flex items-center gap-2">
-                            {expandedYears[year] ? (
-                              <ChevronDown className="w-4 h-4 text-gray-500" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4 text-gray-500" />
-                            )}
-                            {year}
-                          </span>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                            {months.length}
-                          </span>
-                        </button>
-
-                        {/* Months for this year */}
-                        {expandedYears[year] && (
-                          <div className="ml-6 space-y-1 border-l-2 border-gray-100 pl-3">
-                            {months
-                              .sort((a, b) => {
-                                // Sort months by date (most recent first)
-                                const monthOrder = [
-                                  "January",
-                                  "February",
-                                  "March",
-                                  "April",
-                                  "May",
-                                  "June",
-                                  "July",
-                                  "August",
-                                  "September",
-                                  "October",
-                                  "November",
-                                  "December",
-                                ];
-                                const aMonth = monthOrder.indexOf(
-                                  a.split(" ")[0]
-                                );
-                                const bMonth = monthOrder.indexOf(
-                                  b.split(" ")[0]
-                                );
-                                return bMonth - aMonth;
-                              })
-                              .map((month) => (
-                                <button
-                                  key={month}
-                                  onClick={() => handleMonthSelect(month)}
-                                  className={`w-full text-left px-3 py-1.5 rounded-md text-sm transition-all duration-150 flex items-center justify-between group ${
-                                    selectedMonth === month
-                                      ? "text-blue-700 font-medium bg-blue-50 border border-blue-200"
-                                      : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
-                                  }`}
-                                >
-                                  <span>{month.split(" ")[0]}</span>{" "}
-                                  {/* Show just month name */}
-                                  <div className="w-4 h-4 flex items-center justify-center">
-                                    <CheckCircle
-                                      className={`w-3 h-3 text-blue-600 transition-all duration-300 ease-out ${
-                                        selectedMonth === month
-                                          ? "opacity-100 scale-100"
-                                          : "opacity-0 scale-75"
-                                      }`}
-                                    />
-                                  </div>
-                                </button>
-                              ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  ))}
               </div>
             </div>
           </div>
@@ -509,7 +516,13 @@ const Sidebar = ({
               </div>
             </div>
 
-            <div className={`overflow-hidden transition-all duration-300 ease-in-out ${tagSectionExpanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                tagSectionExpanded
+                  ? "max-h-screen opacity-100"
+                  : "max-h-0 opacity-0"
+              }`}
+            >
               <div className="pl-4 space-y-3">
                 <div className="space-y-3">
                   {/* Enhanced Selected Tags Display */}
@@ -565,7 +578,7 @@ const Sidebar = ({
       {/* Enhanced Bottom Section */}
       <div className="border-t border-gray-200 flex-shrink-0 bg-white shadow-lg">
         <div className="p-6">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 text-center mb-4 border border-blue-100">
+          <div className=" rounded-xl p-4 text-center mb-4 ">
             <div className="text-2xl font-bold text-blue-900 mb-1">
               {releaseNotes.length}
             </div>
